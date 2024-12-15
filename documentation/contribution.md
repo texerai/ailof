@@ -15,8 +15,9 @@ Thank you for your interest in contributing to this repository! To ensure a smoo
 - Once the reviewer approves, close the PR with the comment: `ready to merge`.
 
 ### 3. Squash Commits and Finalize
-- After the PR is approved, squash all commits on your `dev-` branch into a **single commit** with a clean and detailed message.
-- Push the squashed commit and create a final merge PR from your `dev-` branch to the `main` branch.
+- After the PR is approved, from the `dev-` branch create `pr-dev-` branch.
+- Squash all commits on the branch into a **single commit** with a clean and detailed message.
+- Push the squashed commit and create a final merge PR from your `pr-dev-` branch to the `main` branch.
 - Once approved, the merge can be completed.
 
 ## How to Squash Commits
@@ -37,7 +38,7 @@ To squash commits, follow these steps:
 4. **Push the Changes**:
    - Force push your branch to update the PR:
      ```bash
-     git push --force
+     git push -u origin pr-dev-[name of your branch]
      ```
 
 ## Example Commit Message
