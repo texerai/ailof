@@ -59,7 +59,6 @@ class DesignExplorerController:
 
     def run(self):
         self.view.print_intro()
-        self.model.load_dummy_data()
         self.read_key()
         self.view.update_view(self.model.working_list, "")
 

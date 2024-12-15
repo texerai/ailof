@@ -1,6 +1,6 @@
 # Copyright (c) 2024 texer.ai. All rights reserved.
 import sys
-from controllers.terminal_controller import Command
+from source.controllers.terminal_controller import Command
 
 class DesignExplorerTerminalView:
     def __init__(self):

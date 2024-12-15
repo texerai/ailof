@@ -8,23 +8,10 @@ class DesignExplorerModel:
         self.working_list = []
         self.command_buffer = ""
 
-    def load_json_vcd_hierarchy(self, json_design_hierarchy):
+    def load_json_design_hierarchy(self, json_design_hierarchy):
         self.json_design_hierarchy = json_design_hierarchy
-
-    def load_dummy_data(self):
-        for i in range(5):
-            self.design_module_list.append("chiptop.system.tile_prci_domain.tile_reset_domain_boom_tile.core.dispatcher.io_dis_uops_0_0_valid")
-            self.design_module_list.append("chiptop.system.tile_prci_domain.tile_reset_domain_boom_tile.core.dispatcher.io_dis_uops_1_0_valid")
-            self.design_module_list.append("chiptop.system.tile_prci_domain.tile_reset_domain_boom_tile.core.dispatcher.io_dis_uops_2_0_valid")
-            self.design_module_list.append("chiptop.system.tile_prci_domain.tile_reset_domain_boom_tile.core.dispatcher.io_dis_uops_0_0_bits_rob_idx")
-            self.design_module_list.append("chiptop.system.tile_prci_domain.tile_reset_domain_boom_tile.core.dispatcher.io_dis_uops_1_0_bits_rob_idx")
-            self.design_module_list.append("chiptop.system.tile_prci_domain.tile_reset_domain_boom_tile.core.dispatcher.io_dis_uops_2_0_bits_rob_idx")
-            self.design_module_list.append("chiptop.system.tile_prci_domain.tile_reset_domain_boom_tile.core.dispatcher.io_dis_uops_0_0_bits_debug_inst")
-            self.design_module_list.append("chiptop.system.tile_prci_domain.tile_reset_domain_boom_tile.core.dispatcher.io_dis_uops_1_0_bits_debug_inst")
-            self.design_module_list.append("chiptop.system.tile_prci_domain.tile_reset_domain_boom_tile.core.dispatcher.io_dis_uops_2_0_bits_debug_inst")
-            self.design_module_list.append("chiptop.system.tile_prci_domain.tile_reset_domain_boom_tile.core.dispatcher.io_dis_uops_2_0_bits_debug_pc")
-
-        self.working_list = self.design_module_list.copy()
+        for hierarchy, data in self.json_design_hierarchy.items():
+            self.design_module_list.append(hierarchy)
 
     def get_model_range(self, start, end):
         if start >= end:

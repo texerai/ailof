@@ -25,7 +25,7 @@ class VcdParser:
         self.design_info = {}
         self.hierarchy = {}
 
-    def parse_vcd(self, vcd_file_path, design_files_path):
+    def parse(self, vcd_file_path, design_files_path):
         # Parses the VCD file and design files to generate a design hierarchy.
 
         # Generate hierarchy
@@ -129,5 +129,3 @@ class VcdParser:
 if __name__ == "__main__":
     # Example usage
     parser = VcdParser()
-    parser.parse_vcd('/home/kabylkas/ailof/test_files/vcds/hello_world.cv32a60x.vcd', '/home/kabylkas/cva6')
-    parser.export_json('result.json')
