@@ -1,0 +1,44 @@
+{
+    "signals": [
+        {
+            "hierarchy": "TOP.core.frontend.fetch_unit",
+            "signal_name": "clk_i",
+            "file_path": "/path/to/frontend_fetch_unit_clk_i.sv"
+        },
+        {
+            "hierarchy": "TOP.core.frontend.decode_unit",
+            "signal_name": "rst_n",
+            "file_path": "/path/to/frontend_decode_unit_rst_n.sv"
+        },
+        {
+            "hierarchy": "TOP.core.backend.execution_unit.alu",
+            "signal_name": "alu_ready",
+            "file_path": "/path/to/backend_execution_unit_alu_ready.sv"
+        },
+        {
+            "hierarchy": "TOP.core.backend.execution_unit.fpu",
+            "signal_name": "fpu_valid",
+            "file_path": "/path/to/backend_execution_unit_fpu_valid.sv"
+        },
+        {
+            "hierarchy": "TOP.core.memory.controller.cache",
+            "signal_name": "cache_hit",
+            "file_path": "/path/to/memory_controller_cache_hit.sv"
+        },
+        {
+            "hierarchy": "TOP.core.memory.interface.dram",
+            "signal_name": "dram_addr",
+            "file_path": "/path/to/memory_interface_dram_addr.sv"
+        },
+        {
+            "hierarchy": "TOP.core.io.peripherals.uart",
+            "signal_name": "tx_data",
+            "file_path": "/path/to/io_peripherals_uart_tx_data.sv"
+        },
+        {
+            "hierarchy": "TOP.core.io.peripherals.spi",
+            "signal_name": "spi_clk",
+            "file_path": "/path/to/io_peripherals_spi_clk.sv"
+        }
+    ]
+}
