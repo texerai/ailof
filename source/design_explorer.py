@@ -1,14 +1,14 @@
 # Copyright (c) 2024 texer.ai. All rights reserved.
-from models.model import DesignExplorerModel as Model
-from views.terminal_view import DesignExplorerTerminalView as View
-from controllers.terminal_controller import DesignExplorerController as Controller
+from source.models.model import DesignExplorerModel as Model
+from source.views.terminal_view import DesignExplorerTerminalView as View
+from source.controllers.terminal_controller import DesignExplorerController as Controller
 
-def main():
-    model = Model()
-    view = View()
-    controller = Controller(model, view)
+class DesignExplorer:
+    def __init__(self, json_design_hierarchy):
+        self.model = Model()
+        self.model.load_json_design_hierarchy(json_design_hierarchy)
+        self.view = View()
+        self.controller = Controller(self.model, self.view)
 
-    controller.run()
-
-if __name__ == "__main__":
-    main()
+    def run(self):
+        return self.controller.run()
