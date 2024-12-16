@@ -9,40 +9,62 @@ class DesignExplorerTerminalView:
         self.start_index = 0
         self.end_index = self.display_width
         self.actual_index = 0
-        self.selected_indicies = []
+        self.selected_ids = []
+        self.view_data = []
         self.working_list_size = 0
         self.page_number = 0
-        for i in range(self.display_width):
-            self.selected_indicies.append(False)
 
-    # Function to display the list with the selected item highlighted
-    def update_view(self, working_list, keyword):
+    # Function to update the view data.
+    def update_view_data(self, working_list, working_list_ids):
         self.working_list_size = len(working_list)
-        sys.stdout.write("\x1b[2J\x1b[H")  # Clear the screen and move the cursor to the top
-        print("\nSearch: " + keyword, end="", flush=True)  # Show command prompt
+        self.view_data = []
+        for i in range(self.start_index, self.end_index):
+            if i < len(working_list):
+                self.view_data.append({"id": working_list_ids[i], "hierarchy": working_list[i]})
+
+    # Function to display the list with the selected item highlighted.
+    def update_view(self, keyword):
+        sys.stdout.write("\x1b[2J\x1b[H")
+        print("\nSearch: " + keyword, end="", flush=True)
         print("\n===================\n")
-        for i, item in enumerate(working_list[self.start_index:self.end_index]):
-            item_number = self.display_width * self.page_number + i
-            if self.selected_indicies[i]:
-                line_to_print = "{}. [x] {}".format(item_number, item)
+        i = 0
+        for data in self.view_data:
+            if data["id"] in self.selected_ids:
+                line_to_print = "{}. [x] {}".format(data["id"], data["hierarchy"])
             else:
-                line_to_print = "{}. [ ] {}".format(item_number, item)
+                line_to_print = "{}. [ ] {}".format(data["id"], data["hierarchy"])
 
             if i == self.highlighted_index:
                 print(f"--> {line_to_print}")  # Highlight the selected item
             else:
                 print(f"    {line_to_print}")
+            i += 1
         print("\n===================")
         print("Commands: Ctrl+C to Exit | Enter to select the module")
 
     def register_command(self, command):
         if command == Command.UP:
-            self.highlighted_index -= 1 % self.display_width
-            self.actual_index
+            if self.actual_index > 0:
+                self.highlighted_index -= 1
+                self.actual_index -= 1
         elif command == Command.DOWN:
-            self.highlighted_index += 1 % self.display_width
+            if self.actual_index < self.working_list_size:
+                self.highlighted_index += 1
+                self.actual_index += 1
+                if self.highlighted_index >= self.display_width:
+                    self.page_number += 1
+                    self.start_index = self.page_number * self.display_width
+                    self.end_index = (self.page_number + 1) * self.display_width - 1
+                    self.highlighted_index = 0
+
+        elif command == Command.SEARCH:
+            self.highlighted_index = 0
         elif command == Command.SELECT:
-            self.selected_indicies[self.highlighted_index] = not self.selected_indicies[self.highlighted_index]
+            current_id = self.view_data[self.highlighted_index]["id"]
+            if current_id not in self.selected_ids:
+                self.selected_ids.append(current_id)
+            else:
+                self.selected_ids.remove(current_id)
 
     # Function to display intro message.
     def print_intro(self):

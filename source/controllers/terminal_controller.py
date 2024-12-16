@@ -18,6 +18,7 @@ class DesignExplorerController:
         self.view = view
         self.keyword = ""
         self.running = True
+        self.selected_module_ids = []
 
     def read_key(self):
         fd = sys.stdin.fileno()
@@ -60,7 +61,8 @@ class DesignExplorerController:
     def run(self):
         self.view.print_intro()
         self.read_key()
-        self.view.update_view(self.model.working_list, "")
+        self.view.update_view_data(self.model.working_list, self.model.working_list_ids)
+        self.view.update_view("")
 
         while self.running:
             key = self.read_key()
@@ -68,9 +70,9 @@ class DesignExplorerController:
 
             if command == Command.SEARCH:
                 self.model.filter(self.keyword)
+                self.view.update_view_data(self.model.working_list, self.model.working_list_ids)
             elif command == Command.TERMINATE:
                 self.running = False
 
-
             self.view.register_command(command)
-            self.view.update_view(self.model.working_list, self.keyword)
+            self.view.update_view(self.keyword)
