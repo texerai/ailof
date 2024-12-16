@@ -44,6 +44,9 @@ def main():
         json_design_hierarchy = vcd_parser.parse(vcd_file_path, design_root_path)
 
         explorer = DesignExplorer.DesignExplorer(json_design_hierarchy)
-        explorer.run()
+        selected_modules = explorer.run()
+
+        # Pass selected modules to Bekzat's LLM communicator.
+        print(selected_modules)
 
 main()

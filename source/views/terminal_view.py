@@ -1,6 +1,6 @@
 # Copyright (c) 2024 texer.ai. All rights reserved.
+import math
 import sys
-from source.controllers.terminal_controller import Command
 
 class DesignExplorerTerminalView:
     def __init__(self):
@@ -13,14 +13,17 @@ class DesignExplorerTerminalView:
         self.view_data = []
         self.working_list_size = 0
         self.page_number = 0
+        self.total_pages = 0
 
     # Function to update the view data.
     def update_view_data(self, working_list, working_list_ids):
-        self.working_list_size = len(working_list)
         self.view_data = []
         for i in range(self.start_index, self.end_index):
             if i < len(working_list):
                 self.view_data.append({"id": working_list_ids[i], "hierarchy": working_list[i]})
+
+        self.working_list_size = len(working_list)
+        self.total_pages = self.working_list_size / self.display_width
 
     # Function to display the list with the selected item highlighted.
     def update_view(self, keyword):
@@ -39,32 +42,11 @@ class DesignExplorerTerminalView:
             else:
                 print(f"    {line_to_print}")
             i += 1
-        print("\n===================")
-        print("Commands: Ctrl+C to Exit | Enter to select the module")
+        print(f"\n=================== Page {self.page_number}/{math.ceil(self.total_pages) - 1}")
+        print("Commands: Enter/space key to select the module | Ctrl+c to exit | Ctrl+n to pass module info further")
 
     def register_command(self, command):
-        if command == Command.UP:
-            if self.actual_index > 0:
-                self.highlighted_index -= 1
-                self.actual_index -= 1
-        elif command == Command.DOWN:
-            if self.actual_index < self.working_list_size:
-                self.highlighted_index += 1
-                self.actual_index += 1
-                if self.highlighted_index >= self.display_width:
-                    self.page_number += 1
-                    self.start_index = self.page_number * self.display_width
-                    self.end_index = (self.page_number + 1) * self.display_width - 1
-                    self.highlighted_index = 0
-
-        elif command == Command.SEARCH:
-            self.highlighted_index = 0
-        elif command == Command.SELECT:
-            current_id = self.view_data[self.highlighted_index]["id"]
-            if current_id not in self.selected_ids:
-                self.selected_ids.append(current_id)
-            else:
-                self.selected_ids.remove(current_id)
+        pass
 
     # Function to display intro message.
     def print_intro(self):

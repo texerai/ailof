@@ -11,4 +11,4 @@ class DesignExplorer:
         self.controller = Controller(self.model, self.view)
 
     def run(self):
-        self.controller.run()
+        return self.controller.run()
