@@ -25,9 +25,15 @@ class VcdParser:
         self.design_info = {}
         self.hierarchy = {}
 
-    def parse(self, vcd_file_path, design_files_path):
+    def parse(self, vcd_file_path, f_list_path):
         # Parses the VCD file and design files to generate a design hierarchy.
 
+        if not os.path.isfile(vcd_file_path):
+            raise FileNotFoundError(f"The file {vcd_file_path} does not exist.")
+        
+        if not os.path.isfile(f_list_path):
+            raise FileNotFoundError(f"The file {f_list_path} does not exist.")
+        
         # Generate hierarchy
         with open(vcd_file_path, 'r') as vcd_file:
             lines = vcd_file.readlines()
@@ -61,30 +67,37 @@ class VcdParser:
                 elif current_path:
                     current_path.pop()
 
-        # parse all modules and entities
+        # Parse all modules and entities
         module_declarations = {}
         entity_to_class = {}
         entity_to_path = {}
+        
+        with open(f_list_path, 'r') as f_list:
+            for line in f_list:
+                file_path = line.strip()
+                
+                if not os.path.isfile(file_path):
+                    print(f"File {file_path} not found.")
 
-
-        for root, _, files in os.walk(design_files_path):
-            for file in files:
-                if file.endswith('.v') or file.endswith('.sv'):
-                    filepath = os.path.join(root, file)
-                    with open(filepath, 'r') as f:
+                try:
+                    with open(file_path, 'r') as f:
                         content = f.read()
-
+                        
                         modules = re.findall(REGEX_STRING_MATCH_VERILOG_MODULE_DECLARE, content)
-
+                        
                         for module in modules:
-                            module_declarations[module] = filepath
-
+                            module_declarations[module] = file_path
+                            
                         entities = re.findall(REGEX_STRING_MATCH_VERILOG_ENTITY, content)
-
+                        
                         for module_class, module_entity in entities:
-                            entity_to_path[module_entity] = filepath
+                            entity_to_path[module_entity] = file_path
                             entity_to_class[module_entity] = module_class
+                
+                except Exception as e:
+                    print(f"Failed to read {file_path}: {e}")           
 
+        # Running over hierarchy and matching declare_path and init_path
         def process_node(node, current_path = ""):
             for key, value in node.items():
                 full_path = f"{current_path}.{key}" if current_path else key
