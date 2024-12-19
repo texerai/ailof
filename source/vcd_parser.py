@@ -87,7 +87,13 @@ class VcdParser:
 
         def process_node(node, current_path = ""):
             for key, value in node.items():
-                full_path = f"{current_path}.{key}" if current_path else key
+                
+                full_path = ""
+                
+                if(module_declarations.get(key) is None and entity_to_path.get(key) is None):
+                    full_path = f"{current_path}" if current_path else ""
+                else:
+                    full_path = f"{current_path}.{key}" if current_path else key
 
                 self.design_info[full_path] = {
                     JSON_OBJ_NAME_DECLARE_PATH: None,
