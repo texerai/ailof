@@ -38,6 +38,6 @@ echo "[INFO] Checking required packages..."
 check_and_install
 
 echo "[INFO] Formatting the project..."
-isort --profile black -l 80 .
-black -l 80 .
+isort --profile black -l 160 .
+black -l 160 .
 echo "[INFO] Formatting complete."
