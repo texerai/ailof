@@ -15,7 +15,7 @@ Thank you for your interest in contributing to this repository! To ensure a smoo
 - Remember to format your code once again after addressing comments to maintain a consistent code style.
 
 ### 3. Squash Commits and Finalize
-- Once the reviewer approves, close the PR with the Squash and Merge option.
+- Once the reviewer approves, close the PR with the `Squash and merge` option.
 - Write a clean and detailed commit message summarizing the changes.
 - The line length of the commit message must be less than 80 characters.
 - Complete the merge by deleting the `dev-` branch.
