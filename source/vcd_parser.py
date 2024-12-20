@@ -25,8 +25,14 @@ class VcdParser:
         self.design_info = {}
         self.hierarchy = {}
 
-    def parse(self, vcd_file_path, design_files_path):
+    def parse(self, vcd_file_path, f_list_path):
         # Parses the VCD file and design files to generate a design hierarchy.
+
+        if not os.path.isfile(vcd_file_path):
+            raise FileNotFoundError(f"The file {vcd_file_path} does not exist.")
+
+        if not os.path.isfile(f_list_path):
+            raise FileNotFoundError(f"The file {f_list_path} does not exist.")
 
         # Generate hierarchy
         with open(vcd_file_path, 'r') as vcd_file:
@@ -66,11 +72,14 @@ class VcdParser:
         entity_to_class = {}
         entity_to_path = {}
 
+        with open(f_list_path, 'r') as f_list:
+            for line in f_list:
+                filepath = line.strip()
 
-        for root, _, files in os.walk(design_files_path):
-            for file in files:
-                if file.endswith('.v') or file.endswith('.sv'):
-                    filepath = os.path.join(root, file)
+                if not os.path.isfile(filepath):
+                    print(f"File {filepath} not found.")
+
+                try:
                     with open(filepath, 'r') as f:
                         content = f.read()
 
@@ -85,10 +94,19 @@ class VcdParser:
                             entity_to_path[module_entity] = filepath
                             entity_to_class[module_entity] = module_class
 
+                except Exception as e:
+                    print(f"Failed to read {filepath}: {e}")
+
         def process_node(node, current_path = ""):
             for key, value in node.items():
-                full_path = f"{current_path}.{key}" if current_path else key
+ 
+                full_path = ""
 
+                if(module_declarations.get(key) is None and entity_to_path.get(key) is None):
+                    full_path = f"{current_path}" if current_path else ""
+                else:
+                    full_path = f"{current_path}.{key}" if current_path else key
+ 
                 self.design_info[full_path] = {
                     JSON_OBJ_NAME_DECLARE_PATH: None,
                     JSON_OBJ_NAME_INIT_PATH: None
