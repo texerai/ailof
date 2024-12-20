@@ -20,21 +20,24 @@ check_and_install() {
 
     echo "[WARNING] Missing packages: ${missing[*]}"
     read -p "[PROMPT] Do you want to install them? [y/N] " response
-    
-    if [[ "${response,,}" =~ ^y ]]; then
-        echo "[INFO] Installing missing packages..."
-        pip install "${missing[@]}"
-        echo "[INFO] Packages installed successfully."
-    else
-        echo "[ERROR] Cannot proceed without required packages."
-        exit 1
-    fi
+
+    case "$response" in
+        [Yy]*)
+            echo "[INFO] Installing missing packages..."
+            pip install "${missing[@]}"
+            echo "[INFO] Packages installed successfully."
+            ;;
+        *)
+            echo "[ERROR] Cannot proceed without required packages."
+            exit 1
+            ;;
+    esac
 }
 
 echo "[INFO] Checking required packages..."
 check_and_install
 
 echo "[INFO] Formatting the project..."
-isort --profile black -l 100 .
-black -l 100 .
+isort --profile black -l 80 .
+black -l 80 .
 echo "[INFO] Formatting complete."
