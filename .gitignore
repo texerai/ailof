@@ -1,5 +1,7 @@
 # Custom.
 source/*.json
+test/test_files/designs/*
+!test/test_files/designs/.gitkeep
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
