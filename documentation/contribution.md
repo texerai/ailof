@@ -12,10 +12,12 @@ Thank you for your interest in contributing to this repository! To ensure a smoo
 - Once your changes are ready for feedback, format your code with `format.sh` and create a Pull Request (PR) from your `dev-` branch.
 - The purpose of this PR is to gather feedback and comments from reviewers before finalizing the changes.
 - Address all comments and make necessary fixes directly on the `dev-` branch until the PR is approved.
+- Remember to format your code once again after addressing comments to maintain a consistent code style.
 
 ### 3. Squash Commits and Finalize
 - Once the reviewer approves, close the PR with the Squash and Merge option.
 - Write a clean and detailed commit message summarizing the changes.
+- The line length of the commit message must be less than 80 characters.
 - Complete the merge by deleting the `dev-` branch.
 
 ## Example Commit Message
@@ -24,9 +26,12 @@ Thank you for your interest in contributing to this repository! To ensure a smoo
 ```
 Summary: Implement VCD parser module and update documentation
 
-This commit introduces the VCD parser module capable of parsing design hierarchies, extracting module declarations and entity initializations, and generating structured JSON outputs. It also includes:
+This commit introduces the VCD parser module capable of parsing design
+hierarchies, extracting module declarations and entity initializations,
+and generating structured JSON outputs. It also includes:
 - Updates to `.gitignore` to exclude JSON source files.
-- Comprehensive documentation detailing module usage, workflow, and output structure.
+- Comprehensive documentation detailing module usage, workflow, and output
+structure.
 ```
 
 ## Productivity Trick

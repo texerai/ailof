@@ -1,4 +1,5 @@
 #!/bin/bash
+# Copyright (c) 2024 texer.ai. All rights reserved.
 
 set -euo pipefail
 
