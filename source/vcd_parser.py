@@ -16,7 +16,7 @@ STRING_VCD_UNSCOPE = "$upscope $end"
 
 # JSON object names.
 JSON_OBJ_NAME_DECLARE_PATH = "declaration_path"
-JSON_OBJ_NAME_INIT_PATH = "initialization_path"
+JSON_OBJ_NAME_MODULE_NAME = "module_name"
 
 class VcdParser:
     # A class to parse VCD files and generate JSON about the design structure.
@@ -109,7 +109,7 @@ class VcdParser:
  
                 self.design_info[full_path] = {
                     JSON_OBJ_NAME_DECLARE_PATH: None,
-                    JSON_OBJ_NAME_INIT_PATH: None
+                    JSON_OBJ_NAME_MODULE_NAME: None
                 }
 
                 if isinstance(value, dict):
@@ -122,19 +122,20 @@ class VcdParser:
 
             if(module_declarations.get(module_name) is not None):
                 self.design_info[path][JSON_OBJ_NAME_DECLARE_PATH] = module_declarations.get(module_name)
+                self.design_info[path][JSON_OBJ_NAME_MODULE_NAME] = module_name
                 continue
 
-            if(entity_to_path.get(module_name) is not None):
-                self.design_info[path][JSON_OBJ_NAME_INIT_PATH] = entity_to_path.get(module_name)
+            if(entity_to_class.get(module_name) is not None):
                 module_class = entity_to_class.get(module_name)
-                if(module_class is not None and module_declarations.get(module_class) is not None):
+                if(module_declarations.get(module_class) is not None):
                     self.design_info[path][JSON_OBJ_NAME_DECLARE_PATH] = module_declarations.get(module_class)
+                    self.design_info[path][JSON_OBJ_NAME_MODULE_NAME] = module_class
                 continue
 
 
         self.design_info = {
             path: data for path, data in self.design_info.items()
-            if data[JSON_OBJ_NAME_DECLARE_PATH] is not None or data[JSON_OBJ_NAME_INIT_PATH] is not None
+            if data[JSON_OBJ_NAME_DECLARE_PATH] is not None
         }
 
         return self.design_info
