@@ -2,6 +2,7 @@
 import math
 import sys
 
+
 class DesignExplorerTerminalView:
     def __init__(self):
         self.display_width = 10
@@ -20,7 +21,12 @@ class DesignExplorerTerminalView:
         self.view_data = []
         for i in range(self.start_index, self.end_index):
             if i < len(working_list):
-                self.view_data.append({"id": working_list_ids[i], "hierarchy": working_list[i]})
+                self.view_data.append(
+                    {
+                        "id": working_list_ids[i],
+                        "hierarchy": working_list[i],
+                    }
+                )
 
         self.working_list_size = len(working_list)
         self.total_pages = self.working_list_size / self.display_width
