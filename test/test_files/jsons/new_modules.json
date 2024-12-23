@@ -1,0 +1,390 @@
+{
+    "compressed_instr_decoder_i": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/cvxif_example/compressed_instr_decoder.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/cvxif_example/cvxif_example_coprocessor.sv"
+    },
+    "i_copro_alu": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/cvxif_example/copro_alu.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/cvxif_example/cvxif_example_coprocessor.sv"
+    },
+    "instr_decoder_i": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/cvxif_example/instr_decoder.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/cvxif_example/cvxif_example_coprocessor.sv"
+    },
+    "commit_stage_i": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/commit_stage.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/cva6.sv"
+    },
+    "controller_i": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/controller.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/cva6.sv"
+    },
+    "csr_regfile_i": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/csr_regfile.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/cva6.sv"
+    },
+    "ex_stage_i": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/ex_stage.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/cva6.sv"
+    },
+    "ex_stage_i.alu2_i": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/alu.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/ex_stage.sv"
+    },
+    "ex_stage_i.alu2_i.i_clz_64b": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/vendor/pulp-platform/common_cells/src/lzc.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/alu.sv"
+    },
+    "ex_stage_i.alu2_i.i_cpop_count": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/vendor/pulp-platform/common_cells/src/popcount.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/alu.sv"
+    },
+    "ex_stage_i.alu_i": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/alu.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/ex_stage.sv"
+    },
+    "ex_stage_i.alu_i.i_clz_64b": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/vendor/pulp-platform/common_cells/src/lzc.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/alu.sv"
+    },
+    "ex_stage_i.alu_i.i_cpop_count": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/vendor/pulp-platform/common_cells/src/popcount.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/alu.sv"
+    },
+    "ex_stage_i.branch_unit_i": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/branch_unit.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/ex_stage.sv"
+    },
+    "ex_stage_i.csr_buffer_i": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/csr_buffer.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/ex_stage.sv"
+    },
+    "ex_stage_i.cvxif_fu_i": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/cvxif_fu.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/ex_stage.sv"
+    },
+    "ex_stage_i.i_mult": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/mult.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/ex_stage.sv"
+    },
+    "ex_stage_i.i_mult.i_div": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/serdiv.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/mult.sv"
+    },
+    "ex_stage_i.i_mult.i_div.i_lzc_a": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/vendor/pulp-platform/common_cells/src/lzc.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/serdiv.sv"
+    },
+    "ex_stage_i.i_mult.i_div.i_lzc_b": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/vendor/pulp-platform/common_cells/src/lzc.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/serdiv.sv"
+    },
+    "ex_stage_i.i_mult.i_multiplier": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/multiplier.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/mult.sv"
+    },
+    "ex_stage_i.lsu_i": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/load_store_unit.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/ex_stage.sv"
+    },
+    "ex_stage_i.lsu_i.i_load_unit": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/load_unit.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/load_store_unit.sv"
+    },
+    "ex_stage_i.lsu_i.i_load_unit.lzc_windex_i": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/vendor/pulp-platform/common_cells/src/lzc.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/load_unit.sv"
+    },
+    "ex_stage_i.lsu_i.i_pipe_reg_load": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/vendor/pulp-platform/common_cells/src/shift_reg.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/load_store_unit.sv"
+    },
+    "ex_stage_i.lsu_i.i_pipe_reg_store": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/vendor/pulp-platform/common_cells/src/shift_reg.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/load_store_unit.sv"
+    },
+    "ex_stage_i.lsu_i.i_pmp_data_if": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/pmp/src/pmp_data_if.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/load_store_unit.sv"
+    },
+    "ex_stage_i.lsu_i.i_pmp_data_if.i_pmp_data": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/pmp/src/pmp.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/pmp/src/pmp_data_if.sv"
+    },
+    "ex_stage_i.lsu_i.i_pmp_data_if.i_pmp_data.i_pmp_entry": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/pmp/src/pmp.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/pmp/src/pmp.sv"
+    },
+    "ex_stage_i.lsu_i.i_pmp_data_if.i_pmp_data.i_pmp_entry.i_lzc": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/cva6_mmu/cva6_shared_tlb.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/cva6_mmu/cva6_shared_tlb.sv"
+    },
+    "ex_stage_i.lsu_i.i_pmp_data_if.i_pmp_if": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/pmp/src/pmp.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/pmp/src/pmp_data_if.sv"
+    },
+    "ex_stage_i.lsu_i.i_pmp_data_if.i_pmp_if.i_pmp_entry": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/pmp/src/pmp.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/pmp/src/pmp.sv"
+    },
+    "ex_stage_i.lsu_i.i_pmp_data_if.i_pmp_if.i_pmp_entry.i_lzc": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/cva6_mmu/cva6_shared_tlb.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/cva6_mmu/cva6_shared_tlb.sv"
+    },
+    "ex_stage_i.lsu_i.i_store_unit": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/store_unit.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/load_store_unit.sv"
+    },
+    "ex_stage_i.lsu_i.i_store_unit.store_buffer_i": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/store_buffer.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/store_unit.sv"
+    },
+    "ex_stage_i.lsu_i.lsu_bypass_i": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/lsu_bypass.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/load_store_unit.sv"
+    },
+    "i_cache_subsystem": {
+        "declaration_path": null,
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/cva6.sv"
+    },
+    "i_cache_subsystem.i_axi_arbiter": {
+        "declaration_path": null,
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/cache_subsystem/cva6_hpdcache_subsystem.sv"
+    },
+    "i_cache_subsystem.i_axi_arbiter.i_icache_hpdcache_data_upsize": {
+        "declaration_path": null,
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/cache_subsystem/cva6_hpdcache_subsystem_axi_arbiter.sv"
+    },
+    "i_cache_subsystem.i_axi_arbiter.i_icache_refill_meta_fifo": {
+        "declaration_path": null,
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/cache_subsystem/cva6_hpdcache_subsystem_axi_arbiter.sv"
+    },
+    "i_cache_subsystem.i_axi_arbiter.i_hpdcache_mem_to_axi_read": {
+        "declaration_path": null,
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/cache_subsystem/cva6_hpdcache_subsystem_axi_arbiter.sv"
+    },
+    "i_cache_subsystem.i_axi_arbiter.i_hpdcache_mem_to_axi_write": {
+        "declaration_path": null,
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/cache_subsystem/cva6_hpdcache_subsystem_axi_arbiter.sv"
+    },
+    "i_cache_subsystem.i_axi_arbiter.i_icache_miss_req_fifo": {
+        "declaration_path": null,
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/cache_subsystem/cva6_hpdcache_subsystem_axi_arbiter.sv"
+    },
+    "i_cache_subsystem.i_axi_arbiter.i_mem_req_read_arbiter": {
+        "declaration_path": null,
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/cache_subsystem/cva6_hpdcache_subsystem_axi_arbiter.sv"
+    },
+    "i_cache_subsystem.i_axi_arbiter.i_mem_resp_read_demux": {
+        "declaration_path": null,
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/cache_subsystem/cva6_hpdcache_subsystem_axi_arbiter.sv"
+    },
+    "i_cache_subsystem.i_cva6_icache": {
+        "declaration_path": null,
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/cache_subsystem/cva6_hpdcache_subsystem.sv"
+    },
+    "i_cache_subsystem.i_cva6_icache.data_sram": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/common/local/util/sram.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/common/local/util/sram_cache.sv"
+    },
+    "i_cache_subsystem.i_cva6_icache.data_sram.i_tc_sram_wrapper": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/common/local/util/tc_sram_wrapper_cache_techno.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/common/local/util/sram_cache.sv"
+    },
+    "i_cache_subsystem.i_cva6_icache.data_sram.i_tc_sram_wrapper.i_tc_sram": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/common/local/util/tc_sram_wrapper_cache_techno.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/common/local/util/tc_sram_wrapper_cache_techno.sv"
+    },
+    "i_cache_subsystem.i_cva6_icache.tag_sram": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/common/local/util/sram.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/cva6_mmu/cva6_shared_tlb.sv"
+    },
+    "i_cache_subsystem.i_cva6_icache.tag_sram.i_tc_sram_wrapper": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/common/local/util/tc_sram_wrapper_cache_techno.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/common/local/util/sram_cache.sv"
+    },
+    "i_cache_subsystem.i_cva6_icache.tag_sram.i_tc_sram_wrapper.i_tc_sram": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/common/local/util/tc_sram_wrapper_cache_techno.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/common/local/util/tc_sram_wrapper_cache_techno.sv"
+    },
+    "i_cache_subsystem.i_cva6_icache.i_lfsr": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/vendor/pulp-platform/common_cells/src/lfsr.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/cva6_mmu/cva6_shared_tlb.sv"
+    },
+    "i_cache_subsystem.i_cva6_icache.i_lzc": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/cva6_mmu/cva6_shared_tlb.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/cva6_mmu/cva6_shared_tlb.sv"
+    },
+    "i_cache_subsystem.i_cva6_icache.i_lzc_hit": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/vendor/pulp-platform/common_cells/src/lzc.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/cache_subsystem/cva6_icache.sv"
+    },
+    "i_cache_subsystem.i_dcache": {
+        "declaration_path": null,
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/cache_subsystem/cva6_hpdcache_subsystem.sv"
+    },
+    "i_cache_subsystem.i_dcache.i_cva6_hpdcache_load_if_adapter": {
+        "declaration_path": null,
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/cache_subsystem/cva6_hpdcache_wrapper.sv"
+    },
+    "i_cache_subsystem.i_dcache.i_cva6_hpdcache_store_if_adapter": {
+        "declaration_path": null,
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/cache_subsystem/cva6_hpdcache_wrapper.sv"
+    },
+    "i_cache_subsystem.i_dcache.i_hpdcache": {
+        "declaration_path": null,
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/cache_subsystem/cva6_hpdcache_wrapper.sv"
+    },
+    "i_cache_subsystem.i_dcache.i_hpdcache.data_sram": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/common/local/util/sram.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/common/local/util/sram_cache.sv"
+    },
+    "i_cache_subsystem.i_dcache.i_hwpf_stride_wrapper": {
+        "declaration_path": null,
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/cache_subsystem/cva6_hpdcache_wrapper.sv"
+    },
+    "i_cva6_rvfi_probes": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/cva6_rvfi_probes.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/cva6.sv"
+    },
+    "i_frontend": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/frontend/frontend.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/cva6.sv"
+    },
+    "i_frontend.i_bht": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/frontend/bht.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/frontend/frontend.sv"
+    },
+    "i_frontend.i_instr_scan": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/frontend/instr_scan.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/frontend/frontend.sv"
+    },
+    "i_frontend.i_instr_queue": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/frontend/instr_queue.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/frontend/frontend.sv"
+    },
+    "i_frontend.i_instr_queue.i_fifo_instr_data": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/cva6_fifo_v3.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/frontend/instr_queue.sv"
+    },
+    "i_frontend.i_instr_queue.i_lzc_branch_index": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/vendor/pulp-platform/common_cells/src/lzc.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/frontend/instr_queue.sv"
+    },
+    "i_frontend.i_instr_queue.i_popcount": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/vendor/pulp-platform/common_cells/src/popcount.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/frontend/instr_queue.sv"
+    },
+    "i_frontend.i_instr_queue.i_fifo_address": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/cva6_fifo_v3.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/frontend/instr_queue.sv"
+    },
+    "i_frontend.i_instr_realign": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/instr_realign.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/frontend/frontend.sv"
+    },
+    "i_frontend.i_ras": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/frontend/ras.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/frontend/frontend.sv"
+    },
+    "id_stage_i": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/id_stage.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/cva6.sv"
+    },
+    "id_stage_i.compressed_decoder_i": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/id_stage.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/id_stage.sv"
+    },
+    "id_stage_i.i_cvxif_compressed_if_driver_i": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/cvxif_compressed_if_driver.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/id_stage.sv"
+    },
+    "id_stage_i.decoder_i": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/decoder.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/id_stage.sv"
+    },
+    "issue_stage_i": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/issue_stage.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/cva6.sv"
+    },
+    "issue_stage_i.i_issue_read_operands": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/issue_read_operands.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/issue_stage.sv"
+    },
+    "issue_stage_i.i_issue_read_operands.i_ariane_regfile": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/ariane_regfile_ff.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/issue_read_operands.sv"
+    },
+    "issue_stage_i.i_issue_read_operands.i_sel_gpr_clobbers": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/vendor/pulp-platform/common_cells/src/rr_arb_tree.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/issue_read_operands.sv"
+    },
+    "issue_stage_i.i_issue_read_operands.i_sel_rs1": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/vendor/pulp-platform/common_cells/src/rr_arb_tree.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/issue_read_operands.sv"
+    },
+    "issue_stage_i.i_issue_read_operands.i_sel_rs2": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/vendor/pulp-platform/common_cells/src/rr_arb_tree.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/issue_read_operands.sv"
+    },
+    "issue_stage_i.i_issue_read_operands.i_sel_rs3": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/vendor/pulp-platform/common_cells/src/rr_arb_tree.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/issue_read_operands.sv"
+    },
+    "issue_stage_i.i_issue_read_operands.i_cvxif_issue_register_commit_if_driver": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/cvxif_issue_register_commit_if_driver.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/issue_read_operands.sv"
+    },
+    "issue_stage_i.i_scoreboard": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/scoreboard.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/issue_stage.sv"
+    },
+    "i_arb": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/vendor/pulp-platform/common_cells/src/stream_arbiter.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/vendor/pulp-platform/common_cells/src/stream_arbiter.sv"
+    },
+    "i_arb.i_arbiter": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/vendor/pulp-platform/common_cells/src/rr_arb_tree.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/vendor/pulp-platform/common_cells/src/stream_arbiter_flushable.sv"
+    },
+    "i_arb.i_arbiter.i_lzc_lower": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/vendor/pulp-platform/common_cells/src/lzc.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/vendor/pulp-platform/common_cells/src/rr_arb_tree.sv"
+    },
+    "i_arb.i_arbiter.i_lzc_upper": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/vendor/pulp-platform/common_cells/src/rr_arb_tree.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/vendor/pulp-platform/common_cells/src/rr_arb_tree.sv"
+    },
+    "i_lzc_lower": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/vendor/pulp-platform/common_cells/src/lzc.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/vendor/pulp-platform/common_cells/src/rr_arb_tree.sv"
+    },
+    "i_lzc_upper": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/vendor/pulp-platform/common_cells/src/rr_arb_tree.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/vendor/pulp-platform/common_cells/src/rr_arb_tree.sv"
+    },
+    "i_b_fifo": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/cva6_fifo_v3.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/core/cache_subsystem/wt_axi_adapter.sv"
+    },
+    "i_counter": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/vendor/pulp-platform/common_cells/src/counter.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/vendor/pulp-platform/common_cells/src/counter.sv"
+    },
+    "i_tc_sram_wrapper_user": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/common/local/util/tc_sram_wrapper.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/common/local/util/sram.sv"
+    },
+    "i_tc_sram_wrapper_user.i_tc_sram": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/common/local/util/tc_sram_wrapper_cache_techno.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/common/local/util/tc_sram_wrapper_cache_techno.sv"
+    },
+    "i_tc_sram_wrapper": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/common/local/util/tc_sram_wrapper_cache_techno.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/common/local/util/sram_cache.sv"
+    },
+    "i_tc_sram_wrapper.i_tc_sram": {
+        "declaration_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/common/local/util/tc_sram_wrapper_cache_techno.sv",
+        "initialization_path": "/Users/sanzhar/ailof/test/test_files/designs/cva6/common/local/util/tc_sram_wrapper_cache_techno.sv"
+    }
+}

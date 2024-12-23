@@ -4,6 +4,8 @@ import sys
 import json
 import subprocess
 
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from source.vcd_parser import VcdParser
 
 REPO_URL = "https://github.com/openhwgroup/cva6"
@@ -13,7 +15,7 @@ PATH_TO_NEW_JSON = "test/test_files/jsons/new_modules.json"
 
 PATH_TO_DESIGN = "test/test_files/designs"
 PATH_TO_VCD_FILE = "test/test_files/vcds/hello_world.cv32a65x.vcd"
-PATH_TO_FLIST_FILE = ""
+PATH_TO_FLIST_FILE = "/Users/sanzhar/ailof/test/test_files/flists/Flist.cva6"
 
 def clone_verilog_design(repo_url):
     
