@@ -76,7 +76,7 @@ class VcdParser:
             for line in f_list:
                 filepath = line.strip()
                 
-                if not line or line.startswith('//') or line.startswith('#'):
+                if not line.strip() or line.startswith('//') or line.startswith('#'):
                     continue
                 
                 if not os.path.isfile(filepath):
