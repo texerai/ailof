@@ -75,9 +75,13 @@ class VcdParser:
         with open(f_list_path, 'r') as f_list:
             for line in f_list:
                 filepath = line.strip()
-
+                
+                if not line.strip() or line.startswith('//') or line.startswith('#'):
+                    continue
+                
                 if not os.path.isfile(filepath):
                     print(f"File {filepath} not found.")
+                    continue
 
                 try:
                     with open(filepath, 'r') as f:
