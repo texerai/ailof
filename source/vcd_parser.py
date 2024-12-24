@@ -2,6 +2,7 @@
 import json
 import os
 import re
+from dotenv import load_dotenv
 
 # Regex match constant strings.
 REGEX_STRING_MATCH_MODULE = r"\$scope module (\S+) \$end"
@@ -10,6 +11,7 @@ REGEX_STRING_MATCH_INTERFACE = r"\$scope interface (\S+) \$end"
 REGEX_STRING_MATCH_UNION = r"\$scope union (\S+) \$end"
 REGEX_STRING_MATCH_VERILOG_MODULE_DECLARE = r'module\s+(\w+)(?:\s+import\s+[\w\.\*\:]*;)?\s*(?:#\([\s\S]*?\))?\s*\('
 REGEX_STRING_MATCH_VERILOG_ENTITY = r'(\w+)\s+#\([\s\S]*?\)\s+(\w+)\s+\('
+REGEX_STRING_MATH_ABSOLUTE_DESIGN_PATH = r"\$\{[^}]+\}"
 
 # VCD related constants.
 STRING_VCD_UNSCOPE = "$upscope $end"
@@ -34,6 +36,12 @@ class VcdParser:
         if not os.path.isfile(f_list_path):
             raise FileNotFoundError(f"The file {f_list_path} does not exist.")
 
+        load_dotenv()
+        abs_path_to_verilog_design = os.getenv("ABSOLUTE_PATH_TO_VERILOG_DESIGN")
+        
+        if not abs_path_to_verilog_design:
+            raise KeyError("Error: ABSOLUTE_PATH_TO_VERILOG_DESIGN is not set or is empty.")
+        
         # Generate hierarchy
         with open(vcd_file_path, 'r') as vcd_file:
             lines = vcd_file.readlines()
@@ -79,6 +87,8 @@ class VcdParser:
                 if not line.strip() or line.startswith('//') or line.startswith('#'):
                     continue
                 
+                filepath = re.sub(REGEX_STRING_MATH_ABSOLUTE_DESIGN_PATH, abs_path_to_verilog_design, filepath)
+
                 if not os.path.isfile(filepath):
                     print(f"File {filepath} not found.")
                     continue
