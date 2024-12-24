@@ -27,5 +27,5 @@ check_and_install
 
 echo "[INFO] Formatting the project..."
 ruff check --fix .
-ruff format --line-length 160 .
+ruff format .
 echo "[INFO] Formatting complete."
