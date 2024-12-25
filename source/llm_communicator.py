@@ -4,28 +4,36 @@ import json
 import anthropic
 
 SYSTEM_PROMPT = """
-Given the Verilog code of a processor module, identify the signals
-that you think should not affect the functionality of the processor.
-You should consider signals such as handshake signals (ready), FIFO
-full signals, busy signals, etc. For each signal you propose, provide
-the percentage of how certain you are the signal should not affect
-the functional correctness of the processor.
+Given a Verilog processor module, identify signals that can be safely fuzzed
+without affecting core functionality. A signal is considered safe if:
+- It can be tied to constants (0/1) without breaking the design
+- It can be modified through AND/OR gates while maintaining correct operation
 
-Provide the output in JSON format with the following information:
-1. Signal name.
-2. Certainty in percentage.
-3. One sentence explanation of why the signal should not affect the processor.
+Focus on:
+- Handshake/flow control signals
+- Status flags (ready, busy, full)
+- Debug/monitoring signals
+- Optional feature controls
+- Performance-related signals
 
-Output format example:
+Respond with ONLY valid JSON in the following format, without any additional text:
 {
     "signals": [
         {
-            "name": "signal_name",
-            "certainty": 95,
-            "explanation": "This is a handshake signal used only for flow control."
+            "name": string,            // Use local signal name without hierarchy
+            "width": integer,
+            "certainty": integer,      // 0-100 confidence score
+            "explanation": string,     // Justification for fuzzing safety
+            "fuzz_method": string,     // "tie_constant"|"logic_gates"|"both"
+            "safe_value": string       // If tie_constant: "0"|"1"|"either"
         }
-    ]
+    ],
+    "note": string  // Optional. Include only for critical design observations
+                    // or potential edge cases. Keep to one sentence.
 }
+
+Exclude any signals that might affect functionality under specific conditions.
+Do not include any explanatory text before or after the JSON output.
 """
 
 
@@ -34,6 +42,7 @@ class LLMCommunicator:
         self.modules_to_process = modules
         self.modules_with_signals = {}
         self.client = anthropic.Anthropic()
+        print(f"LLMCommunicator is initialized with {len(modules)} modules to process.\n")
 
     def _read_module_content(self, module_path):
         try:
@@ -57,6 +66,7 @@ class LLMCommunicator:
         return count.input_tokens
 
     def analyze_module(self, module_path):
+        print(f"\nAnalyzing module: {module_path}")
         content = self._read_module_content(module_path)
         try:
             response = (
@@ -84,6 +94,9 @@ class LLMCommunicator:
             data = json.loads(response)
             if "signals" not in data:
                 raise ValueError(f"Unexpected JSON structure: {response}")
+            print(f"Successfully analyzed {module_path}: found {len(data["signals"])} signals.")
+            if "note" in data:
+                print(f"Note: {data["note"]}")
             return data["signals"]
 
         except anthropic.APIError as e:
@@ -92,8 +105,10 @@ class LLMCommunicator:
             raise ValueError(f"LLM response is not valid JSON: {response}")
 
     def run(self):
+        print("Starting module analysis...")
         for module_name, module_info in self.modules_to_process.items():
             signals = self.analyze_module(module_info["declaration_path"])
             self.modules_with_signals[module_name] = signals
 
+        print(f"\nAnalysis complete. Processed {len(self.modules_with_signals)} modules.\n")
         return self.modules_with_signals
