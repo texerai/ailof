@@ -4,6 +4,7 @@ import sys
 import termios
 import tty
 
+
 class Command(enum.Enum):
     UNDEFINED = 0
     UP = 1
@@ -12,6 +13,7 @@ class Command(enum.Enum):
     SELECT = 4
     SEARCH = 5
     CONTINUE = 6
+
 
 class DesignExplorerController:
     def __init__(self, model, view):
@@ -27,7 +29,7 @@ class DesignExplorerController:
         try:
             tty.setraw(fd)
             ch = sys.stdin.read(1)
-            if ch == '\x1b':
+            if ch == "\x1b":
                 ch += sys.stdin.read(2)
             return ch
         finally:
@@ -37,23 +39,23 @@ class DesignExplorerController:
         ret_command = Command.UNDEFINED
 
         # Up.
-        if key == '\x1b[A':
+        if key == "\x1b[A":
             ret_command = Command.UP
         # Down.
-        elif key == '\x1b[B':
+        elif key == "\x1b[B":
             ret_command = Command.DOWN
         # Ctrl+C.
-        elif key == '\x03':
+        elif key == "\x03":
             ret_command = Command.TERMINATE
         # Enter/Space.
-        elif key in ['\n', '\r', ' ']:
+        elif key in ["\n", "\r", " "]:
             ret_command = Command.SELECT
         # Backspace.
-        elif key == '\x7f':
+        elif key == "\x7f":
             self.keyword = self.keyword[:-1]
             ret_command = Command.SEARCH
         # Ctrl+N.
-        elif key == '\x0e':
+        elif key == "\x0e":
             ret_command = Command.CONTINUE
         # Printable character.
         elif len(key) == 1 and key.isprintable():

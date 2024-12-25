@@ -4,40 +4,28 @@
 set -euo pipefail
 
 check_and_install() {
-    local missing=()
-    
-    if ! command -v isort >/dev/null 2>&1; then
-        missing+=("isort")
-    fi
-    
-    if ! command -v black >/dev/null 2>&1; then
-        missing+=("black")
-    fi
-    
-    if [ ${#missing[@]} -eq 0 ]; then
-        return 0
-    fi
+    if ! command -v ruff >/dev/null 2>&1; then
+        echo "[WARNING] Missing package: Ruff"
+        read -p "[PROMPT] Do you want to install it? [y/N] " response
 
-    echo "[WARNING] Missing packages: ${missing[*]}"
-    read -p "[PROMPT] Do you want to install them? [y/N] " response
-
-    case "$response" in
-        [Yy]*)
-            echo "[INFO] Installing missing packages..."
-            pip install "${missing[@]}"
-            echo "[INFO] Packages installed successfully."
-            ;;
-        *)
-            echo "[ERROR] Cannot proceed without required packages."
-            exit 1
-            ;;
-    esac
+        case "$response" in
+            [Yy]*)
+                echo "[INFO] Installing Ruff..."
+                pip install ruff
+                echo "[INFO] Package installed successfully."
+                ;;
+            *)
+                echo "[ERROR] Cannot proceed without Ruff."
+                exit 1
+                ;;
+        esac
+    fi
 }
 
 echo "[INFO] Checking required packages..."
 check_and_install
 
 echo "[INFO] Formatting the project..."
-isort --profile black -l 160 .
-black -l 160 .
+ruff check --fix .
+ruff format .
 echo "[INFO] Formatting complete."

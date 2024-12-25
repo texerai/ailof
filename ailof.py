@@ -7,23 +7,26 @@ import source.vcd_parser as VcdParser
 import source.design_explorer as DesignExplorer
 import source.llm_communicator as LLMCommunicator
 
+
 def parse_arguments():
     parser = argparse.ArgumentParser(
         description="Parse VCD files and extract design information.",
-        epilog="Example usage: python script.py --vcd <vcd_file> --path <design_root_path>"
+        epilog="Example usage: python script.py --vcd <vcd_file> --path <design_root_path>",
     )
 
     # Adding mandatory arguments
     parser.add_argument(
-        '-v', '--vcd',
+        "-v",
+        "--vcd",
         required=True,
-        help="path to the VCD file to be processed."
+        help="path to the VCD file to be processed.",
     )
 
     parser.add_argument(
-        '-p', '--path',
+        "-p",
+        "--path",
         required=True,
-        help="path to the root directory of the design files."
+        help="path to the root directory of the design files.",
     )
 
     # Parse the arguments
@@ -34,6 +37,7 @@ def parse_arguments():
     args = parser.parse_args()
 
     return True, args.vcd, args.path
+
 
 def main():
     # Get arguments.
@@ -51,5 +55,6 @@ def main():
         modules_with_signals = llm_communicator.run()
 
         print(modules_with_signals)
+
 
 main()

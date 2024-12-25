@@ -40,10 +40,7 @@ class LLMCommunicator:
             with open(module_path, "r") as f:
                 return f.read()
         except (IOError, FileNotFoundError) as e:
-            raise FileNotFoundError(
-                f"Could not read module at {
-                                    module_path}: {str(e)}"
-            )
+            raise FileNotFoundError(f"Could not read module at {module_path}: {str(e)}")
 
     def count_module_tokens(self, module_path):
         content = self._read_module_content(module_path)
@@ -51,7 +48,10 @@ class LLMCommunicator:
         count = self.client.beta.messages.count_tokens(
             model="claude-3-5-sonnet-20241022",
             messages=[
-                {"role": "user", "content": content},
+                {
+                    "role": "user",
+                    "content": content,
+                },
             ],
         )
         return count.input_tokens
@@ -68,7 +68,12 @@ class LLMCommunicator:
                     messages=[
                         {
                             "role": "user",
-                            "content": [{"type": "text", "text": content}],
+                            "content": [
+                                {
+                                    "type": "text",
+                                    "text": content,
+                                }
+                            ],
                         }
                     ],
                 )
@@ -82,10 +87,7 @@ class LLMCommunicator:
             return data["signals"]
 
         except anthropic.APIError as e:
-            raise RuntimeError(
-                f"API error while analyzing {
-                               module_path}: {str(e)}"
-            )
+            raise RuntimeError(f"API error while analyzing {module_path}: {str(e)}")
         except json.JSONDecodeError:
             raise ValueError(f"LLM response is not valid JSON: {response}")
 
