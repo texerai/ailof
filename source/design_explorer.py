@@ -3,6 +3,7 @@ from source.models.model import DesignExplorerModel as Model
 from source.views.terminal_view import DesignExplorerTerminalView as View
 from source.controllers.terminal_controller import DesignExplorerController as Controller
 
+
 class DesignExplorer:
     def __init__(self, json_design_hierarchy):
         self.model = Model()

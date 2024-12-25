@@ -8,21 +8,24 @@ import source.design_explorer as DesignExplorer
 import source.rtl_puncher as RtlPuncher
 import source.llm_communicator as LLMCommunicator
 
+
 def parse_arguments():
     parser = argparse.ArgumentParser(
         description="Parse VCD files and extract design information.",
-        epilog="Example usage: python script.py --vcd <vcd_file> --path <design_root_path>"
+        epilog="Example usage: python script.py --vcd <vcd_file> --path <design_root_path>",
     )
 
     # Adding mandatory arguments
     parser.add_argument(
-        '-v', '--vcd',
+        "-v",
+        "--vcd",
         required=True,
         help="path to the VCD file to be processed.",
     )
 
     parser.add_argument(
-        '-p', '--path',
+        "-p",
+        "--path",
         required=True,
         help="path to the root directory of the design files.",
     )
@@ -35,6 +38,7 @@ def parse_arguments():
     args = parser.parse_args()
 
     return True, args.vcd, args.path
+
 
 def main():
     # Get arguments.
@@ -54,5 +58,6 @@ def main():
 
         puncher = RtlPuncher.RtlPuncher(json_design_hierarchy, selected_modules, modules_with_signals)
         puncher.punch()
+
 
 main()
