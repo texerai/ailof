@@ -41,8 +41,7 @@ class LLMCommunicator:
                 return f.read()
         except (IOError, FileNotFoundError) as e:
             raise FileNotFoundError(
-                f"Could not read module at {
-                                    module_path}: {str(e)}"
+                f"Could not read module at {module_path}: {str(e)}"
             )
 
     def count_module_tokens(self, module_path):
@@ -83,8 +82,7 @@ class LLMCommunicator:
 
         except anthropic.APIError as e:
             raise RuntimeError(
-                f"API error while analyzing {
-                               module_path}: {str(e)}"
+                f"API error while analyzing {module_path}: {str(e)}"
             )
         except json.JSONDecodeError:
             raise ValueError(f"LLM response is not valid JSON: {response}")
