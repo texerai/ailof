@@ -15,13 +15,13 @@ class Command(enum.Enum):
     CONTINUE = 6
 
 
-class DesignExplorerController:
+class SignalExplorerController:
     def __init__(self, model, view):
         self.model = model
         self.view = view
         self.keyword = ""
         self.running = True
-        self.selected_modules = {}
+        self.selected_signals = {}
 
     def read_key(self):
         fd = sys.stdin.fileno()
@@ -99,16 +99,15 @@ class DesignExplorerController:
             if len(self.view.selected_ids) > 0:
                 self.running = False
                 for id in self.view.selected_ids:
-                    hierarchy = self.model.design_module_list[id]
-                    self.selected_modules[hierarchy] = self.model.json_design_hierarchy[hierarchy]
+                    signal = self.model.selected_signals[id].split(" | ")[0]
+                    self.selected_signals[signal] = self.model.all_signals[signal]
         elif command == Command.TERMINATE:
             self.running = False
         else:
             print("Error: Unknown command.")
 
     def run(self):
-        self.view.print_intro()
-
+        self.view.print_message()
         self.read_key()
         self.view.update_view_data(self.model.working_list, self.model.working_list_ids)
 
@@ -118,4 +117,4 @@ class DesignExplorerController:
             command = self.process_key(key)
             self.process_command(command)
 
-        return self.selected_modules
+        return self.selected_signals
