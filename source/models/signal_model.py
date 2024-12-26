@@ -8,7 +8,7 @@ class SignalExplorerModel:
         flattened = {}
         for module, module_info in modules_with_signals.items():
             for signal in module_info["signals"]:
-                full_signal_name = f"{module}.{signal["name"]}"
+                full_signal_name = f"{module}.{signal['name']}"
                 signal_info = signal.copy()
                 signal_info["module_name"] = module_info["module_name"]
                 signal_info["declaration_path"] = module_info["declaration_path"]
