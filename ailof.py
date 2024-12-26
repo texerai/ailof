@@ -6,6 +6,7 @@ import sys
 import source.vcd_parser as VcdParser
 import source.design_explorer as DesignExplorer
 import source.llm_communicator as LLMCommunicator
+import source.signal_explorer as SignalExplorer
 
 
 def parse_arguments():
@@ -54,7 +55,10 @@ def main():
         llm_communicator = LLMCommunicator.LLMCommunicator(selected_modules)
         modules_with_signals = llm_communicator.run()
 
-        print(modules_with_signals)
+        signal_explorer = SignalExplorer.SignalExplorer(modules_with_signals)
+        selected_signals = signal_explorer.run()
+
+        print(selected_signals)
 
 
 main()

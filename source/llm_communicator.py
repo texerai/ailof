@@ -2,6 +2,7 @@
 
 import json
 import anthropic
+import sys
 
 SYSTEM_PROMPT = """
 Given a Verilog processor module, identify signals that can be safely fuzzed
@@ -39,9 +40,9 @@ Do not include any explanatory text before or after the JSON output.
 
 class LLMCommunicator:
     def __init__(self, modules):
-        self.modules_to_process = modules
-        self.modules_with_signals = {}
+        self.modules = modules
         self.client = anthropic.Anthropic()
+        sys.stdout.write("\x1b[2J\x1b[H")
         print(f"LLMCommunicator is initialized with {len(modules)} modules to process.\n")
 
     def _read_module_content(self, module_path):
@@ -94,9 +95,9 @@ class LLMCommunicator:
             data = json.loads(response)
             if "signals" not in data:
                 raise ValueError(f"Unexpected JSON structure: {response}")
-            print(f"Successfully analyzed {module_path}: found {len(data["signals"])} signals.")
+            print(f"Successfully analyzed {module_path}: found {len(data['signals'])} signals.")
             if "note" in data:
-                print(f"Note: {data["note"]}")
+                print(f"Note: {data['note']}")
             return data["signals"]
 
         except anthropic.APIError as e:
@@ -106,9 +107,9 @@ class LLMCommunicator:
 
     def run(self):
         print("Starting module analysis...")
-        for module_name, module_info in self.modules_to_process.items():
+        for module_name, module_info in self.modules.items():
             signals = self.analyze_module(module_info["declaration_path"])
-            self.modules_with_signals[module_name] = signals
+            self.modules[module_name]["signals"] = signals
 
-        print(f"\nAnalysis complete. Processed {len(self.modules_with_signals)} modules.\n")
-        return self.modules_with_signals
+        print(f"\nAnalysis complete. Processed {len(self.modules)} modules.\n")
+        return self.modules
