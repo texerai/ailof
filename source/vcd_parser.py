@@ -8,8 +8,8 @@ REGEX_STRING_MATCH_MODULE = r"\$scope module (\S+) \$end"
 REGEX_STRING_MATCH_STRUCT = r"\$scope struct (\S+) \$end"
 REGEX_STRING_MATCH_INTERFACE = r"\$scope interface (\S+) \$end"
 REGEX_STRING_MATCH_UNION = r"\$scope union (\S+) \$end"
-REGEX_STRING_MATCH_VERILOG_MODULE_DECLARE = r"module\s+(\w+)(?:\s+import\s+[\w\.\*\:]*;)?\s*(?:#\([\s\S]*?\))?\s*\("
-REGEX_STRING_MATCH_VERILOG_ENTITY = r"(\w+)\s+#\([\s\S]*?\)\s+(\w+)\s+\("
+REGEX_STRING_MATCH_VERILOG_MODULE_DECLARE = r"module\s+([^\s#(]+)"
+REGEX_STRING_MATCH_VERILOG_ENTITY = r"(?<!module\s)\b([a-zA-Z_][a-zA-Z0-9_]*)\s+#\([\s\S]*?\)\s+([a-zA-Z_][a-zA-Z0-9_]*)\s+\("
 
 # VCD related constants.
 STRING_VCD_UNSCOPE = "$upscope $end"
@@ -26,14 +26,24 @@ class VcdParser:
         self.design_info = {}
         self.hierarchy = {}
 
-    def parse(self, vcd_file_path, f_list_path):
-        # Parses the VCD file and design files to generate a design hierarchy.
+    def __validate_design_info(self, data):
+        """Validates generated design_info. Private method used in 'parse' method"""
+        keys = set(data.keys())
 
+        for key in keys:
+            parts = key.split(".")
+            for i in range(1, len(parts)):
+                splitted_key = ".".join(parts[:i])
+                if splitted_key not in keys:
+                    ancestor = ".".join(parts[: i - 1]) if i > 1 else ""
+                    missing_module = parts[i - 1]
+                    raise ModuleNotFoundError(f"Module '{missing_module}' is not found in {ancestor}")
+        return True
+
+    def parse(self, vcd_file_path, f_list):
+        # Parses the VCD file and design files to generate a design hierarchy.
         if not os.path.isfile(vcd_file_path):
             raise FileNotFoundError(f"The file {vcd_file_path} does not exist.")
-
-        if not os.path.isfile(f_list_path):
-            raise FileNotFoundError(f"The file {f_list_path} does not exist.")
 
         # Generate hierarchy
         with open(vcd_file_path, "r") as vcd_file:
@@ -73,34 +83,30 @@ class VcdParser:
         entity_to_class = {}
         entity_to_path = {}
 
-        with open(f_list_path, "r") as f_list:
-            for line in f_list:
-                filepath = line.strip()
+        for line in f_list.splitlines():
+            filepath = line.strip()
 
-                if not line.strip() or line.startswith("//") or line.startswith("#"):
-                    continue
+            if not os.path.isfile(filepath):
+                print(f"File {filepath} not found.")
+                continue
 
-                if not os.path.isfile(filepath):
-                    print(f"File {filepath} not found.")
-                    continue
+            try:
+                with open(filepath, "r") as f:
+                    content = f.read()
 
-                try:
-                    with open(filepath, "r") as f:
-                        content = f.read()
+                    modules = re.findall(REGEX_STRING_MATCH_VERILOG_MODULE_DECLARE, content)
 
-                        modules = re.findall(REGEX_STRING_MATCH_VERILOG_MODULE_DECLARE, content)
+                    for module in modules:
+                        module_declarations[module] = filepath
 
-                        for module in modules:
-                            module_declarations[module] = filepath
+                    entities = re.findall(REGEX_STRING_MATCH_VERILOG_ENTITY, content)
 
-                        entities = re.findall(REGEX_STRING_MATCH_VERILOG_ENTITY, content)
+                    for module_class, module_entity in entities:
+                        entity_to_path[module_entity] = filepath
+                        entity_to_class[module_entity] = module_class
 
-                        for module_class, module_entity in entities:
-                            entity_to_path[module_entity] = filepath
-                            entity_to_class[module_entity] = module_class
-
-                except Exception as e:
-                    print(f"Failed to read {filepath}: {e}")
+            except Exception as e:
+                print(f"Failed to read {filepath}: {e}")
 
         def process_node(node, current_path=""):
             for key, value in node.items():
@@ -138,10 +144,11 @@ class VcdParser:
 
         self.design_info = {path: data for path, data in self.design_info.items() if data[JSON_OBJ_NAME_DECLARE_PATH] is not None}
 
+        self.__validate_design_info(self.design_info)
         return self.design_info
 
     def export_json(self, output_path):
-        # Utility function. Exports the parsed design info as a JSON file.
+        """Utility function. Exports the parsed design info as a JSON file."""
         with open(output_path, "w") as outfile:
             json.dump(self.design_info, outfile, indent=4)
 
