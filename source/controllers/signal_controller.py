@@ -66,9 +66,19 @@ class SignalExplorerController:
 
     def process_command(self, command):
         if command == Command.SEARCH:
+            prev_actual_index = self.view.actual_index
+
             self.model.filter(self.keyword)
+
+            if not self.keyword:
+                target_index = min(prev_actual_index, len(self.model.working_list) - 1)
+                self.view.page_number = target_index // self.view.display_width
+                self.view.start_index = self.view.page_number * self.view.display_width
+                self.view.end_index = (self.view.page_number + 1) * self.view.display_width
+                self.view.highlighted_index = target_index % self.view.display_width
+                self.view.actual_index = target_index
+
             self.view.update_view_data(self.model.working_list, self.model.working_list_ids)
-            self.view.highlighted_index = 0
         elif command == Command.UP:
             if self.view.actual_index > 0:
                 self.view.highlighted_index -= 1
@@ -80,7 +90,7 @@ class SignalExplorerController:
                     self.view.highlighted_index = self.view.display_width - 1
                     self.view.update_view_data(self.model.working_list, self.model.working_list_ids)
         elif command == Command.DOWN:
-            if self.view.actual_index < len(self.model.working_list):
+            if self.view.actual_index < len(self.model.working_list) - 1:
                 self.view.highlighted_index += 1
                 self.view.actual_index += 1
                 if self.view.highlighted_index >= self.view.display_width:
@@ -103,6 +113,7 @@ class SignalExplorerController:
                     self.selected_signals[signal] = self.model.all_signals[signal]
         elif command == Command.TERMINATE:
             self.running = False
+            sys.exit(0)  # To exit the whole program.
         else:
             print("Error: Unknown command.")
 
