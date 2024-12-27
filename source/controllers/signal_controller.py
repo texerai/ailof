@@ -100,6 +100,8 @@ class SignalExplorerController:
                     self.view.highlighted_index = 0
                     self.view.update_view_data(self.model.working_list, self.model.working_list_ids)
         elif command == Command.SELECT:
+            if not self.view.view_data:
+                return
             current_id = self.view.view_data[self.view.highlighted_index]["id"]
             if current_id not in self.view.selected_ids:
                 self.view.selected_ids.append(current_id)
