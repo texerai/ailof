@@ -3,6 +3,7 @@ import enum
 import sys
 import termios
 import tty
+from source.exceptions import UserTerminationException
 
 
 class Command(enum.Enum):
@@ -112,7 +113,7 @@ class SignalExplorerController:
                     self.selected_signals[signal] = self.model.all_signals[signal]
         elif command == Command.TERMINATE:
             self.running = False
-            sys.exit(0)  # To exit the whole program.
+            raise UserTerminationException()
         else:
             print("Error: Unknown command.")
 

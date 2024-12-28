@@ -7,6 +7,7 @@ import source.vcd_parser as VcdParser
 import source.design_explorer as DesignExplorer
 import source.llm_communicator as LLMCommunicator
 import source.signal_explorer as SignalExplorer
+from source.exceptions import UserTerminationException
 
 
 def parse_arguments():
@@ -41,24 +42,27 @@ def parse_arguments():
 
 
 def main():
-    # Get arguments.
-    is_parsed, vcd_file_path, design_root_path = parse_arguments()
+    try:
+        # Get arguments.
+        is_parsed, vcd_file_path, design_root_path = parse_arguments()
 
-    # Parse VCD.
-    if is_parsed:
-        vcd_parser = VcdParser.VcdParser()
-        json_design_hierarchy = vcd_parser.parse(vcd_file_path, design_root_path)
+        # Parse VCD.
+        if is_parsed:
+            vcd_parser = VcdParser.VcdParser()
+            json_design_hierarchy = vcd_parser.parse(vcd_file_path, design_root_path)
 
-        explorer = DesignExplorer.DesignExplorer(json_design_hierarchy)
-        selected_modules = explorer.run()
+            explorer = DesignExplorer.DesignExplorer(json_design_hierarchy)
+            selected_modules = explorer.run()
 
-        llm_communicator = LLMCommunicator.LLMCommunicator(selected_modules)
-        modules_with_signals = llm_communicator.run()
+            llm_communicator = LLMCommunicator.LLMCommunicator(selected_modules)
+            modules_with_signals = llm_communicator.run()
 
-        signal_explorer = SignalExplorer.SignalExplorer(modules_with_signals)
-        selected_signals = signal_explorer.run()
+            signal_explorer = SignalExplorer.SignalExplorer(modules_with_signals)
+            selected_signals = signal_explorer.run()
 
-        print(selected_signals)
+            print(selected_signals)
+    except UserTerminationException:
+        sys.exit(0)
 
 
 main()
