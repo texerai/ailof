@@ -7,6 +7,7 @@ import source.vcd_parser as VcdParser
 import source.design_explorer as DesignExplorer
 import source.llm_communicator as LLMCommunicator
 import source.signal_explorer as SignalExplorer
+
 from source.exceptions import UserTerminationException
 
 

@@ -3,6 +3,7 @@ import enum
 import sys
 import termios
 import tty
+
 from source.exceptions import UserTerminationException
 
 
