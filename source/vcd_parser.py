@@ -8,8 +8,8 @@ REGEX_STRING_MATCH_MODULE = r"\$scope module (\S+) \$end"
 REGEX_STRING_MATCH_STRUCT = r"\$scope struct (\S+) \$end"
 REGEX_STRING_MATCH_INTERFACE = r"\$scope interface (\S+) \$end"
 REGEX_STRING_MATCH_UNION = r"\$scope union (\S+) \$end"
-REGEX_STRING_MATCH_VERILOG_MODULE_DECLARE = r"module\s+([^\s#(]+)"
-REGEX_STRING_MATCH_VERILOG_ENTITY = r"(?<!module\s)\b([a-zA-Z_][a-zA-Z0-9_]*)\s+#\([\s\S]*?\)\s+([a-zA-Z_][a-zA-Z0-9_]*)\s+\("
+REGEX_STRING_MATCH_VERILOG_MODULE_DECLARE = r"^\s*module\s+([^\s#(]+)"
+REGEX_STRING_MATCH_VERILOG_ENTITY = r"^\s*(\w+)\s*#?\s*\((?:[^()]|\([^()]*\))*\)\s*(\w+)\s*\("
 
 # VCD related constants.
 STRING_VCD_UNSCOPE = "$upscope $end"
@@ -93,15 +93,17 @@ class VcdParser:
             try:
                 with open(filepath, "r") as f:
                     content = f.read()
-
-                    modules = re.findall(REGEX_STRING_MATCH_VERILOG_MODULE_DECLARE, content)
+                    modules = re.findall(REGEX_STRING_MATCH_VERILOG_MODULE_DECLARE, content, re.MULTILINE)
 
                     for module in modules:
                         module_declarations[module] = filepath
 
-                    entities = re.findall(REGEX_STRING_MATCH_VERILOG_ENTITY, content)
+                    entities = re.finditer(REGEX_STRING_MATCH_VERILOG_ENTITY, content, re.MULTILINE | re.DOTALL)
 
-                    for module_class, module_entity in entities:
+                    for entity in entities:
+                        module_class = entity.group(1)
+                        module_entity = entity.group(2)
+
                         entity_to_path[module_entity] = filepath
                         entity_to_class[module_entity] = module_class
 
