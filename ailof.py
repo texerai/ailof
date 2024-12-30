@@ -5,7 +5,7 @@ import sys
 # Ailof code.
 import source.vcd_parser as VcdParser
 import source.design_explorer as DesignExplorer
-import source.rtl_puncher as RtlPuncher
+import source.rtl_patcher as RtlPatcher
 import source.llm_communicator as LLMCommunicator
 
 
@@ -48,6 +48,7 @@ def main():
     if is_parsed:
         vcd_parser = VcdParser.VcdParser()
         json_design_hierarchy = vcd_parser.parse(vcd_file_path, design_root_path)
+        vcd_parser.export_json("design.json")
 
         explorer = DesignExplorer.DesignExplorer(json_design_hierarchy)
         selected_modules = explorer.run()
@@ -56,8 +57,8 @@ def main():
         llm_communicator = LLMCommunicator.LLMCommunicator(selected_modules)
         modules_with_signals = llm_communicator.run()
 
-        puncher = RtlPuncher.RtlPuncher(json_design_hierarchy, selected_modules, modules_with_signals)
-        puncher.punch()
+        puncher = RtlPatcher.RtlPatcher(json_design_hierarchy, selected_modules, modules_with_signals)
+        puncher.patch()
 
 
 main()

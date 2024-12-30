@@ -94,9 +94,9 @@ class LLMCommunicator:
             data = json.loads(response)
             if "signals" not in data:
                 raise ValueError(f"Unexpected JSON structure: {response}")
-            print(f"Successfully analyzed {module_path}: found {len(data["signals"])} signals.")
+            print(f"Successfully analyzed {module_path}: found {len(data['signals'])} signals.")
             if "note" in data:
-                print(f"Note: {data["note"]}")
+                print(f"Note: {data['note']}")
             return data["signals"]
 
         except anthropic.APIError as e:
