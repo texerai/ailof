@@ -1,0 +1,18 @@
+{
+    "instr_decoder_i": {
+        "declaration_path": "/Users/bepc/workspace/maveric/cva6/core/cvxif_example/instr_decoder.sv",
+        "module_name": "instr_decoder"
+    },
+    "commit_stage_i": {
+        "declaration_path": "/Users/bepc/workspace/maveric/cva6/core/commit_stage.sv",
+        "module_name": "commit_stage"
+    },
+    "ex_stage_i.alu_i": {
+        "declaration_path": "/Users/bepc/workspace/maveric/cva6/core/alu.sv",
+        "module_name": "alu"
+    },
+    "ex_stage_i.lsu_i": {
+        "declaration_path": "/Users/bepc/workspace/maveric/cva6/core/load_store_unit.sv",
+        "module_name": "load_store_unit"
+    }
+}

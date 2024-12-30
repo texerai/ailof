@@ -1,0 +1,78 @@
+{
+    "instr_decoder_i": {
+        "declaration_path": "/Users/bepc/workspace/maveric/cva6/core/cvxif_example/instr_decoder.sv",
+        "module_name": "instr_decoder",
+        "signals": [
+            {
+                "name": "rs1_ready",
+                "width": 1,
+                "certainty": 80,
+                "explanation": "Internal handshake signal derived from register validity, can be safely gated",
+                "fuzz_method": "logic_gates",
+                "safe_value": "either"
+            },
+            {
+                "name": "rs2_ready",
+                "width": 1,
+                "certainty": 80,
+                "explanation": "Internal handshake signal derived from register validity, can be safely gated",
+                "fuzz_method": "logic_gates",
+                "safe_value": "either"
+            },
+            {
+                "name": "rs3_ready",
+                "width": 1,
+                "certainty": 80,
+                "explanation": "Internal handshake signal for optional third port, can be safely gated",
+                "fuzz_method": "logic_gates",
+                "safe_value": "either"
+            },
+            {
+                "name": "sel",
+                "width": -1,
+                "certainty": 70,
+                "explanation": "Instruction selection signal, protected by assertion, can be gated with care",
+                "fuzz_method": "logic_gates",
+                "safe_value": "either"
+            }
+        ]
+    },
+    "ex_stage_i.lsu_i": {
+        "declaration_path": "/Users/bepc/workspace/maveric/cva6/core/load_store_unit.sv",
+        "module_name": "load_store_unit",
+        "signals": [
+            {
+                "name": "store_buffer_empty",
+                "width": 1,
+                "certainty": 90,
+                "explanation": "Status signal indicating store buffer empty state, can be monitored without affecting core functionality",
+                "fuzz_method": "both",
+                "safe_value": "1"
+            },
+            {
+                "name": "itlb_miss_o",
+                "width": 1,
+                "certainty": 95,
+                "explanation": "Performance counter signal for instruction TLB misses, purely for monitoring",
+                "fuzz_method": "both",
+                "safe_value": "0"
+            },
+            {
+                "name": "dtlb_miss_o",
+                "width": 1,
+                "certainty": 95,
+                "explanation": "Performance counter signal for data TLB misses, purely for monitoring",
+                "fuzz_method": "both",
+                "safe_value": "0"
+            },
+            {
+                "name": "commit_ready_o",
+                "width": 1,
+                "certainty": 85,
+                "explanation": "Handshake signal indicating commit queue readiness, can be safely modified with logic gates",
+                "fuzz_method": "logic_gates",
+                "safe_value": "either"
+            }
+        ]
+    }
+}

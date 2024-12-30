@@ -7,6 +7,7 @@ import source.vcd_parser as VcdParser
 import source.design_explorer as DesignExplorer
 import source.rtl_patcher as RtlPatcher
 import source.llm_communicator as LLMCommunicator
+import source.signal_explorer as SignalExplorer
 
 
 def parse_arguments():
@@ -57,8 +58,11 @@ def main():
         llm_communicator = LLMCommunicator.LLMCommunicator(selected_modules)
         modules_with_signals = llm_communicator.run()
 
-        puncher = RtlPatcher.RtlPatcher(json_design_hierarchy, selected_modules, modules_with_signals)
-        puncher.patch()
+        signal_explorer = SignalExplorer.SignalExplorer(modules_with_signals)
+        selected_signals = signal_explorer.run()
 
+        print(selected_signals)
+        rtl_patcher = RtlPatcher.RtlPatcher(json_design_hierarchy, selected_modules, selected_signals)
+        rtl_patcher.patch()
 
 main()
