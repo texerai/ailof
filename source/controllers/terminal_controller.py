@@ -1,18 +1,9 @@
 # Copyright (c) 2024 texer.ai. All rights reserved.
-import enum
 import sys
 import termios
 import tty
 
-
-class Command(enum.Enum):
-    UNDEFINED = 0
-    UP = 1
-    DOWN = 2
-    TERMINATE = 3
-    SELECT = 4
-    SEARCH = 5
-    CONTINUE = 6
+from source.enums import Command, ReturnCode
 
 
 class DesignExplorerController:
@@ -66,9 +57,16 @@ class DesignExplorerController:
 
     def process_command(self, command):
         if command == Command.SEARCH:
+            prev_actual_index = self.view.actual_index
             self.model.filter(self.keyword)
+            if not self.keyword:
+                target_index = min(prev_actual_index, len(self.model.working_list) - 1)
+                self.view.page_number = target_index // self.view.display_width
+                self.view.start_index = self.view.page_number * self.view.display_width
+                self.view.end_index = (self.view.page_number + 1) * self.view.display_width
+                self.view.highlighted_index = target_index % self.view.display_width
+                self.view.actual_index = target_index
             self.view.update_view_data(self.model.working_list, self.model.working_list_ids)
-            self.view.highlighted_index = 0
         elif command == Command.UP:
             if self.view.actual_index > 0:
                 self.view.highlighted_index -= 1
@@ -80,7 +78,7 @@ class DesignExplorerController:
                     self.view.highlighted_index = self.view.display_width - 1
                     self.view.update_view_data(self.model.working_list, self.model.working_list_ids)
         elif command == Command.DOWN:
-            if self.view.actual_index < len(self.model.working_list):
+            if self.view.actual_index < len(self.model.working_list) - 1:
                 self.view.highlighted_index += 1
                 self.view.actual_index += 1
                 if self.view.highlighted_index >= self.view.display_width:
@@ -90,6 +88,8 @@ class DesignExplorerController:
                     self.view.highlighted_index = 0
                     self.view.update_view_data(self.model.working_list, self.model.working_list_ids)
         elif command == Command.SELECT:
+            if not self.view.view_data:
+                return
             current_id = self.view.view_data[self.view.highlighted_index]["id"]
             if current_id not in self.view.selected_ids:
                 self.view.selected_ids.append(current_id)
@@ -103,8 +103,11 @@ class DesignExplorerController:
                     self.selected_modules[hierarchy] = self.model.json_design_hierarchy[hierarchy]
         elif command == Command.TERMINATE:
             self.running = False
+            return ReturnCode.TERMINATE
         else:
             print("Error: Unknown command.")
+            return ReturnCode.FAILURE
+        return ReturnCode.SUCCESS
 
     def run(self):
         self.view.print_intro()
@@ -116,6 +119,8 @@ class DesignExplorerController:
             self.view.update_view(self.keyword)
             key = self.read_key()
             command = self.process_key(key)
-            self.process_command(command)
+            return_code = self.process_command(command)
+            if return_code == ReturnCode.TERMINATE:
+                break
 
-        return self.selected_modules
+        return self.selected_modules, return_code

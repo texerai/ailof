@@ -7,12 +7,15 @@ import source.vcd_parser as VcdParser
 import source.design_explorer as DesignExplorer
 import source.llm_communicator as LLMCommunicator
 import source.signal_explorer as SignalExplorer
+import source.flist_formatter as FlistFormatter
+
+from source.enums import ReturnCode
 
 
 def parse_arguments():
     parser = argparse.ArgumentParser(
-        description="Parse VCD files and extract design information.",
-        epilog="Example usage: python script.py --vcd <vcd_file> --path <design_root_path>",
+        description="Parse VCD and Flist files to extract design information.",
+        epilog="Example usage: python script.py --vcd <vcd_file> --flist <flist_file>",
     )
 
     # Adding mandatory arguments
@@ -24,10 +27,10 @@ def parse_arguments():
     )
 
     parser.add_argument(
-        "-p",
-        "--path",
+        "-f",
+        "--flist",
         required=True,
-        help="path to the root directory of the design files.",
+        help="path to the Flist file to be processed.",
     )
 
     # Parse the arguments
@@ -37,28 +40,33 @@ def parse_arguments():
 
     args = parser.parse_args()
 
-    return True, args.vcd, args.path
+    return True, args.vcd, args.flist
 
 
 def main():
     # Get arguments.
-    is_parsed, vcd_file_path, design_root_path = parse_arguments()
+    is_parsed, vcd_file_path, flist_file_path = parse_arguments()
 
     # Parse VCD.
     if is_parsed:
+        formatter = FlistFormatter.FlistFormatter()
+        flist = formatter.format_cva6(flist_file_path)
+
         vcd_parser = VcdParser.VcdParser()
-        json_design_hierarchy = vcd_parser.parse(vcd_file_path, design_root_path)
+        json_design_hierarchy = vcd_parser.parse(vcd_file_path, flist)
 
         explorer = DesignExplorer.DesignExplorer(json_design_hierarchy)
-        selected_modules = explorer.run()
+        selected_modules, return_code = explorer.run()
 
-        llm_communicator = LLMCommunicator.LLMCommunicator(selected_modules)
-        modules_with_signals = llm_communicator.run()
+        if return_code == ReturnCode.SUCCESS:
+            llm_communicator = LLMCommunicator.LLMCommunicator(selected_modules)
+            modules_with_signals = llm_communicator.run()
 
-        signal_explorer = SignalExplorer.SignalExplorer(modules_with_signals)
-        selected_signals = signal_explorer.run()
+            signal_explorer = SignalExplorer.SignalExplorer(modules_with_signals)
+            selected_signals, return_code = signal_explorer.run()
 
-        print(selected_signals)
+            if return_code == ReturnCode.SUCCESS:
+                print(selected_signals)
 
 
 main()
