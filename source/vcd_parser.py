@@ -3,7 +3,6 @@ import json
 import os
 import re
 
-from source.flist_formatter import FlistFormatter
 
 # Regex match constant strings.
 REGEX_STRING_MATCH_MODULE = r"\$scope module (\S+) \$end"
@@ -19,6 +18,7 @@ STRING_VCD_UNSCOPE = "$upscope $end"
 # JSON object names.
 JSON_OBJ_NAME_DECLARE_PATH = "declaration_path"
 JSON_OBJ_NAME_MODULE_NAME = "module_name"
+
 
 class VcdParser:
     # A class to parse VCD files and generate JSON about the design structure.
@@ -42,9 +42,6 @@ class VcdParser:
         return True
 
     def parse(self, vcd_file_path, f_list):
-        formatter = FlistFormatter()
-        f_list = formatter.format_cva6(f_list)
-
         # Parses the VCD file and design files to generate a design hierarchy.
         if not os.path.isfile(vcd_file_path):
             raise FileNotFoundError(f"The file {vcd_file_path} does not exist.")

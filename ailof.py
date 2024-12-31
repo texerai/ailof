@@ -2,7 +2,6 @@
 import argparse
 import json
 import os
-import sys
 
 # Ailof code.
 import source.vcd_parser as VcdParser
@@ -16,6 +15,7 @@ from source.enums import ReturnCode
 
 # Constants.
 BACKUP_FILE = "./backup/backup.json"
+
 
 def parse_arguments():
     parser = argparse.ArgumentParser(
@@ -42,19 +42,14 @@ def parse_arguments():
         "-u",
         "--undo",
         required=False,
-        action='store_true',
+        action="store_true",
         help="undo the patching, restore backed up files.",
     )
-
-    # Parse the arguments
-    if len(sys.argv) == 1:
-        parser.print_help()
-        return False, "", ""
 
     args = parser.parse_args()
 
     if not args.undo:
-        if not args.path or not args.vcd:
+        if not args.flist or not args.vcd:
             parser.print_help()
             return False, "", ""
 
@@ -92,9 +87,10 @@ def main():
             selected_signals, return_code = signal_explorer.run()
 
             if return_code == ReturnCode.SUCCESS:
-                print(selected_signals)
-
                 rtl_patcher = RtlPatcher.RtlPatcher(json_design_hierarchy, selected_modules, selected_signals)
-                rtl_patcher.patch()
+                is_patched, err_message = rtl_patcher.patch()
+                if not is_patched:
+                    print(err_message)
+
 
 main()
