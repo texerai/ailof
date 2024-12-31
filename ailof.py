@@ -1,5 +1,7 @@
 # Copyright (c) 2024 texer.ai. All rights reserved.
 import argparse
+import json
+import os
 import sys
 
 # Ailof code.
@@ -9,6 +11,8 @@ import source.rtl_patcher as RtlPatcher
 import source.llm_communicator as LLMCommunicator
 import source.signal_explorer as SignalExplorer
 
+# Constants.
+BACKUP_FILE = "./backup/backup.json"
 
 def parse_arguments():
     parser = argparse.ArgumentParser(
@@ -20,15 +24,23 @@ def parse_arguments():
     parser.add_argument(
         "-v",
         "--vcd",
-        required=True,
+        required=False,
         help="path to the VCD file to be processed.",
     )
 
     parser.add_argument(
         "-p",
         "--path",
-        required=True,
+        required=False,
         help="path to the root directory of the design files.",
+    )
+
+    parser.add_argument(
+        "-u",
+        "--undo",
+        required=False,
+        action='store_true',
+        help="undo the patching, restore backed up files.",
     )
 
     # Parse the arguments
@@ -38,18 +50,30 @@ def parse_arguments():
 
     args = parser.parse_args()
 
-    return True, args.vcd, args.path
+    if not args.undo:
+        if not args.path or not args.vcd:
+            parser.print_help()
+            return False, "", ""
+
+    return True, args.vcd, args.path, args.undo
 
 
 def main():
     # Get arguments.
-    is_parsed, vcd_file_path, design_root_path = parse_arguments()
+    is_parsed, vcd_file_path, design_root_path, should_undo = parse_arguments()
 
+    if should_undo:
+        if os.path.exists(BACKUP_FILE):
+            with open(BACKUP_FILE, "r") as infile:
+                backed_up_data = json.load(infile)
+                for file, code in backed_up_data.items():
+                    with open(file, "w") as outfile:
+                        outfile.write(code)
+            os.remove(BACKUP_FILE)
     # Parse VCD.
-    if is_parsed:
+    elif is_parsed:
         vcd_parser = VcdParser.VcdParser()
         json_design_hierarchy = vcd_parser.parse(vcd_file_path, design_root_path)
-        vcd_parser.export_json("design.json")
 
         explorer = DesignExplorer.DesignExplorer(json_design_hierarchy)
         selected_modules = explorer.run()

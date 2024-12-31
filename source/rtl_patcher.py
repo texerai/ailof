@@ -1,4 +1,5 @@
 # Copyright (c) 2024 texer.ai. All rights reserved.
+import json
 import re
 
 def is_signal_output(verilog_code, module_name, signal_name):
@@ -115,11 +116,15 @@ class RtlPatcher:
         self.json_design_hierarchy = json_design_hierarchy
         self.selected_modules = selected_modules
         self.signals_to_punch = signals_to_punch
+        id = 0
+        for signal_hierarchy, signal in self.signals_to_punch.items():
+            signal["punch_name"] = f"punch_out_{signal['name']}_{id}"
+            id += 1
 
     def insert_gates(self, design_file_path, hierarchy, module_name):
-        for signal in self.signals_to_punch[hierarchy]:
+        for signal_hierarchy, signal in self.signals_to_punch.items():
             signal_name = signal["name"]
-            gate_input_signal = f"punch_out_{signal_name}"
+            gate_input_signal = signal["punch_name"]
 
             verilog_code = ""
             with open(design_file_path, "r") as design_file:
@@ -133,8 +138,8 @@ class RtlPatcher:
                     out_file.write(patched_verilog)
 
     def punch_through_instances(self, hierarchy):
-        for signal in self.signals_to_punch[hierarchy]:
-            gate_input_name = f"punch_out_{signal['name']}"
+        for signal_hierarchy, signal in self.signals_to_punch.items():
+            gate_input_name = signal["punch_name"]
             # Punch out the inputs of the gates.
             curr_hierarchy = ""
             instances = hierarchy.split(".")
@@ -150,8 +155,8 @@ class RtlPatcher:
                 seperator = "."
 
     def punch_through_modules(self, hierarchy):
-        for signal in self.signals_to_punch[hierarchy]:
-            gate_input_name = f"punch_out_{signal['name']}"
+        for signal_hierarchy, signal in self.signals_to_punch.items():
+            gate_input_name = signal["punch_name"]
             instances = hierarchy.split(".")
             first_instance = instances[0]
             seperator = f"{first_instance}."
@@ -164,6 +169,24 @@ class RtlPatcher:
                 seperator = "."
 
     def patch(self):
+        # Backup files.
+        backed_up_files = {}
+        for hierarchy, data in self.selected_modules.items():
+            instances = hierarchy.split(".")
+            curr_hierarchy = ""
+            seperator = ""
+            for instance in instances:
+                curr_hierarchy += seperator + instance
+                file_path = self.json_design_hierarchy[curr_hierarchy]["declaration_path"]
+                verilog_code = ""
+                with open(file_path, "r") as infile:
+                    verilog_code = "".join(infile.readlines())
+                backed_up_files[file_path] = verilog_code
+                seperator = "."
+        with open("./backup/backup.json", "w") as json_file:
+            json.dump(backed_up_files, json_file, indent=4)
+
+        # Patch.
         for hierarchy, data in self.selected_modules.items():
             module_name = self.json_design_hierarchy[hierarchy]["module_name"]
 
