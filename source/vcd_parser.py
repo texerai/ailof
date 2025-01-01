@@ -3,6 +3,7 @@ import json
 import os
 import re
 
+
 # Regex match constant strings.
 REGEX_STRING_MATCH_MODULE = r"\$scope module (\S+) \$end"
 REGEX_STRING_MATCH_STRUCT = r"\$scope struct (\S+) \$end"
