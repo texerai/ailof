@@ -45,9 +45,9 @@ def insert_gate(design_file_path, module_name, signal_name, internal_signal_name
 
     # Check if the signal exists in the module
     # It is quite possible that the signal in the port is never used
-    # in the implmentation. So just output the warning.
+    # in the implementation. So just output the warning.
     if not re.search(REGEX_STRING_MATCH_SIGNAL.format(signal_name), module_body):
-        err_message = f"Warnign: Signal '{signal_name}' not found in module '{module_name}'."
+        err_message = f"Warning: Signal '{signal_name}' not found in module '{module_name}'."
         return False, err_message
 
     # Modify the signal to include the gate.
