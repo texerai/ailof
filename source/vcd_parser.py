@@ -9,6 +9,7 @@ REGEX_STRING_MATCH_MODULE = r"\$scope module (\S+) \$end"
 REGEX_STRING_MATCH_STRUCT = r"\$scope struct (\S+) \$end"
 REGEX_STRING_MATCH_INTERFACE = r"\$scope interface (\S+) \$end"
 REGEX_STRING_MATCH_UNION = r"\$scope union (\S+) \$end"
+REGEX_STRING_MATCH_SIGNAL = r"\$var wire\s+(\d+)\s+\S+\s+(\w+)\s+.*\$end"
 REGEX_STRING_MATCH_VERILOG_MODULE_DECLARE = r"^\s*module\s+([^\s#(]+)"
 REGEX_STRING_MATCH_VERILOG_ENTITY = r"^\s*(\w+)\s*#?\s*\((?:[^()]|\([^()]*\))*\)\s*(\w+)\s*\("
 
@@ -18,6 +19,7 @@ STRING_VCD_UNSCOPE = "$upscope $end"
 # JSON object names.
 JSON_OBJ_NAME_DECLARE_PATH = "declaration_path"
 JSON_OBJ_NAME_MODULE_NAME = "module_name"
+JSON_OBJ_NAME_SIGNALS = "signals"
 
 
 class VcdParser:
@@ -26,6 +28,9 @@ class VcdParser:
         """Initializes an empty VcdParser instance."""
         self.design_info = {}
         self.hierarchy = {}
+        self.module_declarations = {}
+        self.entity_to_class = {}
+        self.entity_to_path = {}
 
     def __validate_design_info(self, data):
         """Validates generated design_info. Private method used in 'parse' method"""
@@ -41,12 +46,8 @@ class VcdParser:
                     raise ModuleNotFoundError(f"Module '{missing_module}' is not found in {ancestor}")
         return True
 
-    def parse(self, vcd_file_path, f_list):
-        # Parses the VCD file and design files to generate a design hierarchy.
-        if not os.path.isfile(vcd_file_path):
-            raise FileNotFoundError(f"The file {vcd_file_path} does not exist.")
-
-        # Generate hierarchy
+    def __vcd_file_parser(self, vcd_file_path):
+        """Parses vcd file and builds hierarchy of modules"""
         with open(vcd_file_path, "r") as vcd_file:
             lines = vcd_file.readlines()
 
@@ -60,6 +61,7 @@ class VcdParser:
             scope_struct_match = re.match(REGEX_STRING_MATCH_STRUCT, line)
             scope_interface_match = re.match(REGEX_STRING_MATCH_INTERFACE, line)
             scope_union_match = re.match(REGEX_STRING_MATCH_UNION, line)
+            signal_match = re.match(REGEX_STRING_MATCH_SIGNAL, line)
 
             if scope_module_match:
                 if skip_level == 0:
@@ -68,10 +70,19 @@ class VcdParser:
 
                     current_module = self.hierarchy
                     for path_part in current_path:
-                        current_module = current_module.setdefault(path_part, {})
+                        current_module = current_module.setdefault(path_part, {JSON_OBJ_NAME_SIGNALS: []})
 
             elif scope_struct_match or scope_interface_match or scope_union_match:
                 skip_level += 1
+
+            if signal_match and skip_level == 0:
+                signal_width = int(signal_match.group(1))
+                signal_name = signal_match.group(2)
+
+                current_module = self.hierarchy
+                for path_part in current_path:
+                    current_module = current_module[path_part]
+                current_module[JSON_OBJ_NAME_SIGNALS].append({"name": signal_name, "width": signal_width})
 
             elif line == STRING_VCD_UNSCOPE:
                 if skip_level > 0:
@@ -79,10 +90,33 @@ class VcdParser:
                 elif current_path:
                     current_path.pop()
 
-        # parse all modules and entities
-        module_declarations = {}
-        entity_to_class = {}
-        entity_to_path = {}
+    def __process_hierarchy(self, node, current_path=""):
+        """Processes generated hierarchy tree and builds base for design_info"""
+        for key, value in node.items():
+            if key == JSON_OBJ_NAME_SIGNALS:
+                continue
+
+            full_path = ""
+
+            if self.module_declarations.get(key) is None and self.entity_to_path.get(key) is None:
+                full_path = f"{current_path}" if current_path else ""
+            else:
+                full_path = f"{current_path}.{key}" if current_path else key
+                self.design_info[full_path] = {
+                    JSON_OBJ_NAME_DECLARE_PATH: None,
+                    JSON_OBJ_NAME_MODULE_NAME: None,
+                    JSON_OBJ_NAME_SIGNALS: value.get(JSON_OBJ_NAME_SIGNALS),
+                }
+
+            if isinstance(value, dict):
+                self.__process_hierarchy(value, full_path)
+
+    def parse(self, vcd_file_path, f_list):
+        """Parses the VCD file and design files to generate a design hierarchy."""
+        if not os.path.isfile(vcd_file_path):
+            raise FileNotFoundError(f"The file {vcd_file_path} does not exist.")
+
+        self.__vcd_file_parser(vcd_file_path)
 
         for line in f_list.splitlines():
             filepath = line.strip()
@@ -97,7 +131,7 @@ class VcdParser:
                     modules = re.findall(REGEX_STRING_MATCH_VERILOG_MODULE_DECLARE, content, re.MULTILINE)
 
                     for module in modules:
-                        module_declarations[module] = filepath
+                        self.module_declarations[module] = filepath
 
                     entities = re.finditer(REGEX_STRING_MATCH_VERILOG_ENTITY, content, re.MULTILINE | re.DOTALL)
 
@@ -105,43 +139,26 @@ class VcdParser:
                         module_class = entity.group(1)
                         module_entity = entity.group(2)
 
-                        entity_to_path[module_entity] = filepath
-                        entity_to_class[module_entity] = module_class
+                        self.entity_to_path[module_entity] = filepath
+                        self.entity_to_class[module_entity] = module_class
 
             except Exception as e:
                 print(f"Failed to read {filepath}: {e}")
 
-        def process_node(node, current_path=""):
-            for key, value in node.items():
-                full_path = ""
-
-                if module_declarations.get(key) is None and entity_to_path.get(key) is None:
-                    full_path = f"{current_path}" if current_path else ""
-                else:
-                    full_path = f"{current_path}.{key}" if current_path else key
-
-                self.design_info[full_path] = {
-                    JSON_OBJ_NAME_DECLARE_PATH: None,
-                    JSON_OBJ_NAME_MODULE_NAME: None,
-                }
-
-                if isinstance(value, dict):
-                    process_node(value, full_path)
-
-        process_node(self.hierarchy)
+        self.__process_hierarchy(self.hierarchy)
 
         for path, _ in self.design_info.items():
             module_name = path.split(".")[-1]
 
-            if module_declarations.get(module_name) is not None:
-                self.design_info[path][JSON_OBJ_NAME_DECLARE_PATH] = module_declarations.get(module_name)
+            if self.module_declarations.get(module_name) is not None:
+                self.design_info[path][JSON_OBJ_NAME_DECLARE_PATH] = self.module_declarations.get(module_name)
                 self.design_info[path][JSON_OBJ_NAME_MODULE_NAME] = module_name
                 continue
 
-            if entity_to_class.get(module_name) is not None:
-                module_class = entity_to_class.get(module_name)
-                if module_declarations.get(module_class) is not None:
-                    self.design_info[path][JSON_OBJ_NAME_DECLARE_PATH] = module_declarations.get(module_class)
+            if self.entity_to_class.get(module_name) is not None:
+                module_class = self.entity_to_class.get(module_name)
+                if self.module_declarations.get(module_class) is not None:
+                    self.design_info[path][JSON_OBJ_NAME_DECLARE_PATH] = self.module_declarations.get(module_class)
                     self.design_info[path][JSON_OBJ_NAME_MODULE_NAME] = module_class
                 continue
 
