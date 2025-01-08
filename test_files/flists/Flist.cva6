@@ -203,6 +203,8 @@ ${CVA6_REPO_DIR}/corev_apu/src/axi_riscv_atomics/src/axi_riscv_atomics.sv
 ${CVA6_REPO_DIR}/corev_apu/src/axi_riscv_atomics/src/axi_riscv_lrsc.sv
 ${CVA6_REPO_DIR}/corev_apu/riscv-dbg/src/dm_top.sv
 ${CVA6_REPO_DIR}/corev_apu/riscv-dbg/src/dm_csrs.sv
+${CVA6_REPO_DIR}/corev_apu/riscv-dbg/src/dmi_jtag.sv
+${CVA6_REPO_DIR}/corev_apu/riscv-dbg/src/dmi_cdc.sv
 ${CVA6_REPO_DIR}/corev_apu/fpga/src/axi_slice/src/axi_w_buffer.sv
 ${CVA6_REPO_DIR}/corev_apu/fpga/src/axi_slice/src/axi_single_slice.sv
 ${CVA6_REPO_DIR}/corev_apu/fpga/src/axi_slice/src/axi_r_buffer.sv
