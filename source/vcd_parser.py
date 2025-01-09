@@ -19,7 +19,7 @@ STRING_VCD_UNSCOPE = "$upscope $end"
 # JSON object names.
 JSON_OBJ_NAME_DECLARE_PATH = "declaration_path"
 JSON_OBJ_NAME_MODULE_NAME = "module_name"
-JSON_OBJ_NAME_SIGNALS = "signals"
+JSON_OBJ_NAME_SIGNALS = "signal_width_data"
 
 
 class VcdParser:
@@ -70,7 +70,7 @@ class VcdParser:
 
                     current_module = self.hierarchy
                     for path_part in current_path:
-                        current_module = current_module.setdefault(path_part, {JSON_OBJ_NAME_SIGNALS: []})
+                        current_module = current_module.setdefault(path_part, {JSON_OBJ_NAME_SIGNALS: {}})
 
             elif scope_struct_match or scope_interface_match or scope_union_match:
                 skip_level += 1
@@ -82,7 +82,7 @@ class VcdParser:
                 current_module = self.hierarchy
                 for path_part in current_path:
                     current_module = current_module[path_part]
-                current_module[JSON_OBJ_NAME_SIGNALS].append({"name": signal_name, "width": signal_width})
+                current_module[JSON_OBJ_NAME_SIGNALS][signal_name] = signal_width
 
             elif line == STRING_VCD_UNSCOPE:
                 if skip_level > 0:

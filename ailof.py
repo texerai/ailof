@@ -51,7 +51,7 @@ def parse_arguments():
     if not args.undo:
         if not args.flist or not args.vcd:
             parser.print_help()
-            return False, "", ""
+            return False, "", "", ""
 
     return True, args.vcd, args.flist, args.undo
 

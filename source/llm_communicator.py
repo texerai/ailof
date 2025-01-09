@@ -3,14 +3,16 @@
 import json
 import anthropic
 import sys
+import time
 
 SYSTEM_PROMPT = """
-Given a Verilog processor module, identify signals that can be safely fuzzed
-without affecting core functionality. A signal is considered safe if:
+Given a Verilog processor module, identify internal signals (wire, reg, or logic)
+that can be safely fuzzed without affecting core functionality. Do not include
+module ports or instance ports in the analysis. A signal is considered safe if:
 - It can be tied to constants (0/1) without breaking the design
 - It can be modified through AND/OR gates while maintaining correct operation
 
-Focus on:
+Focus on internal signals of these types:
 - Handshake/flow control signals
 - Status flags (ready, busy, full)
 - Debug/monitoring signals
@@ -22,8 +24,7 @@ Respond with ONLY valid JSON in the following format, without any additional tex
     "signals": [
         {
             "name": string,            // Use local signal name without hierarchy
-            "width": integer,
-            "certainty": integer,      // 0-100 confidence score
+            "certainty": integer,      // Fuzzing safety confidence (0-100)
             "explanation": string,     // Justification for fuzzing safety
             "fuzz_method": string,     // "tie_constant"|"logic_gates"|"both"
             "safe_value": string       // If tie_constant: "0"|"1"|"either"
@@ -33,7 +34,11 @@ Respond with ONLY valid JSON in the following format, without any additional tex
                     // or potential edge cases. Keep to one sentence.
 }
 
-Exclude any signals that might affect functionality under specific conditions.
+Exclude:
+- Module ports (input, output, inout)
+- Instance ports (connections to submodule instances)
+- Any signals that might affect functionality under specific conditions
+
 Do not include any explanatory text before or after the JSON output.
 """
 
@@ -107,8 +112,25 @@ class LLMCommunicator:
 
     def run(self):
         print("Starting module analysis...")
+        total_tokens = 0
+        last_request_time = time.time()
+
         for module_name, module_info in self.modules.items():
-            signals = self.analyze_module(module_info["declaration_path"])
+            path = module_info["declaration_path"]
+            module_tokens = self.count_module_tokens(path)
+
+            if total_tokens + module_tokens >= 40000:
+                time_since_last = time.time() - last_request_time
+                if time_since_last < 60:
+                    wait_time = 60 - time_since_last
+                    print(f"\nApproaching rate limit. Waiting {wait_time:.1f} seconds...")
+                    time.sleep(wait_time)
+
+                total_tokens = 0
+                last_request_time = time.time()
+
+            total_tokens += module_tokens
+            signals = self.analyze_module(path)
             self.modules[module_name]["signals"] = signals
 
         print(f"\nAnalysis complete. Processed {len(self.modules)} modules.\n")
