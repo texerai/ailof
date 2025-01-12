@@ -3,13 +3,13 @@ import json
 import re
 import sys
 
-REGEX_STRING_MATCH_MODULE_BEGIN = "(?i)\bmodule\s+(\w+)\s*(?:\s+import\s+[\w:]+(?:\*|[\w,]*)\s*;\s*)?\#?\s*\(([^;]*?)\)\s*;"
-REGEX_STRING_MATCH_SPEC_MODULE_BEGIN = "module\s+{}(?:\s+import\s+[\w:.*]+;)?(?:\s*#\(\s*([\s\S]*?)\s*\))?\s*\("
-REGEX_STRING_MATCH_OUTPUT_SIGNAL = "output(?:\s+(?:wire|logic|reg))?\s+(?:\[.*?\]\s+)?{}\b"
-REGEX_STRING_MATCH_FULL_MODULE = "module\s+{}\s*(?:\s+import\s+[\w:]+(?:\*|[\w,]*)\s*;\s*)?\#?\s*\([^;]*?\);\s*(.*?)\s*endmodule"
-REGEX_STRING_MATCH_MODULE_PORTS = "module\s+{}\s*(?:\s+import\s+[\w:]+(?:\*|[\w,]*)\s*;\s*)?\#?\s*\([^;]*?\);"
-REGEX_STRING_MATCH_SIGNAL = "\b{}\b"
-REGEX_STRING_MATCH_INSTANCE_BEGIN = "{}\ +(#\([^;]*?\))?\s+\)\ {}\ +\("
+REGEX_STRING_MATCH_MODULE_BEGIN = r"(?i)\bmodule\s+(\w+)\s*(?:\s+import\s+[\w:]+(?:\*|[\w,]*)\s*;\s*)?\#?\s*\(([^;]*?)\)\s*;"
+REGEX_STRING_MATCH_SPEC_MODULE_BEGIN = r"module\s+{}(?:\s+import\s+[\w:.*]+;)?(?:\s*#\(\s*([\s\S]*?)\s*\))?\s*\("
+REGEX_STRING_MATCH_OUTPUT_SIGNAL = r"output(?:\s+(?:wire|logic|reg))?\s+(?:\[.*?\]\s+)?{}\b"
+REGEX_STRING_MATCH_FULL_MODULE = r"module\s+{}\s*(?:\s+import\s+[\w:]+(?:\*|[\w,]*)\s*;\s*)?\#?\s*\([^;]*?\);\s*(.*?)\s*endmodule"
+REGEX_STRING_MATCH_MODULE_PORTS = r"module\s+{}\s*(?:\s+import\s+[\w:]+(?:\*|[\w,]*)\s*;\s*)?\#?\s*\([^;]*?\);"
+REGEX_STRING_MATCH_SIGNAL = r"\b{}\b"
+REGEX_STRING_MATCH_INSTANCE_BEGIN = r"{}\ +(#\([^;]*?\))?\s+\)\ {}\ +\("
 
 
 def is_signal_output(verilog_code, module_name, signal_name):
