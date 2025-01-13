@@ -9,7 +9,7 @@ REGEX_STRING_MATCH_MODULE = r"\$scope module (\S+) \$end"
 REGEX_STRING_MATCH_STRUCT = r"\$scope struct (\S+) \$end"
 REGEX_STRING_MATCH_INTERFACE = r"\$scope interface (\S+) \$end"
 REGEX_STRING_MATCH_UNION = r"\$scope union (\S+) \$end"
-REGEX_STRING_MATCH_SIGNAL = r"\$var wire\s+(\d+)\s+\S+\s+(\w+)\s+.*\$end"
+REGEX_STRING_MATCH_SIGNAL = r"\$var wire\s+(\d+)\s+\S+\s+([\w]+)(?:\[[^\]]+\])?(?:\s+\[\d+:\d+\])?\s+\$end"
 REGEX_STRING_MATCH_VERILOG_MODULE_DECLARE = r"^\s*module\s+([^\s#(]+)"
 REGEX_STRING_MATCH_VERILOG_ENTITY = r"^\s*(\w+)\s*(?:#\s*\((?:[^()]|\([^()]*\))*\))?\s+(\w+)\s*\("
 
@@ -90,7 +90,7 @@ class VcdParser:
                 elif current_path:
                     current_path.pop()
 
-    def __process_hierarchy(self, node, current_path=""):
+    def __process_hierarchy(self, node, current_path="", last_valid_path=""):
         """Processes generated hierarchy tree and builds base for design_info"""
         for key, value in node.items():
             if key == JSON_OBJ_NAME_SIGNALS:
@@ -100,6 +100,10 @@ class VcdParser:
 
             if self.module_declarations.get(key) is None and self.entity_to_path.get(key) is None:
                 full_path = f"{current_path}" if current_path else ""
+                
+                if last_valid_path:
+                    self.design_info[last_valid_path][JSON_OBJ_NAME_SIGNALS].update(value[JSON_OBJ_NAME_SIGNALS])
+                
             else:
                 full_path = f"{current_path}.{key}" if current_path else key
                 self.design_info[full_path] = {
@@ -107,9 +111,10 @@ class VcdParser:
                     JSON_OBJ_NAME_MODULE_NAME: None,
                     JSON_OBJ_NAME_SIGNALS: value.get(JSON_OBJ_NAME_SIGNALS),
                 }
+                last_valid_path = full_path
 
             if isinstance(value, dict):
-                self.__process_hierarchy(value, full_path)
+                self.__process_hierarchy(value, full_path, last_valid_path)
 
     def parse(self, vcd_file_path, f_list):
         """Parses the VCD file and design files to generate a design hierarchy."""
