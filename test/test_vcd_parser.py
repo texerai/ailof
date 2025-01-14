@@ -60,9 +60,9 @@ def compare_json(path_to_json):
             expected_json = json.load(expected_file)
 
         if modified_new_json == expected_json:
-            print("Test cases passed successfully.")
+            print("Test case passed successfully.")
         else:
-            print("Error, files are different")
+            print("VCD_Parser outputing unexpected results. Please fix VCD_Parser or update test case.")
             sys.exit(1)
 
     except FileNotFoundError as e:
