@@ -100,10 +100,10 @@ class VcdParser:
 
             if self.module_declarations.get(key) is None and self.entity_to_path.get(key) is None:
                 full_path = f"{current_path}" if current_path else ""
-                
+
                 if last_valid_path:
                     self.design_info[last_valid_path][JSON_OBJ_NAME_SIGNALS].update(value[JSON_OBJ_NAME_SIGNALS])
-                
+
             else:
                 full_path = f"{current_path}.{key}" if current_path else key
                 self.design_info[full_path] = {
