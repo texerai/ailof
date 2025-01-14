@@ -9,7 +9,7 @@ REGEX_STRING_MATCH_MODULE = r"\$scope module (\S+) \$end"
 REGEX_STRING_MATCH_STRUCT = r"\$scope struct (\S+) \$end"
 REGEX_STRING_MATCH_INTERFACE = r"\$scope interface (\S+) \$end"
 REGEX_STRING_MATCH_UNION = r"\$scope union (\S+) \$end"
-REGEX_STRING_MATCH_SIGNAL = r"\$var wire\s+(\d+)\s+\S+\s+([\w]+)(?:\[[^\]]+\])?(?:\s+\[\d+:\d+\])?\s+\$end"
+REGEX_STRING_MATCH_SIGNAL = r"\$var wire\s+(\d+)\s+\S+\s+([\w\[\]]+)(?:\s+\[\d+:\d+\])?\s+\$end"
 REGEX_STRING_MATCH_VERILOG_MODULE_DECLARE = r"^\s*module\s+([^\s#(]+)"
 REGEX_STRING_MATCH_VERILOG_ENTITY = r"^\s*(\w+)\s*(?:#\s*\((?:[^()]|\([^()]*\))*\))?\s+(\w+)\s*\("
 
