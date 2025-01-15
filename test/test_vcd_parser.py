@@ -61,16 +61,17 @@ def compare_json(path_to_json):
 
         if modified_new_json == expected_json:
             print("Test case passed successfully.")
+            return True
         else:
             print("VCD_Parser outputing unexpected results. Please fix VCD_Parser or update test case.")
-            sys.exit(1)
+            return False
 
     except FileNotFoundError as e:
         print(f"Error: {e}")
-        sys.exit(1)
+        return False
     except json.JSONDecodeError as e:
         print(f"Invalid JSON format: {e}")
-        sys.exit(1)
+        return False
 
 
 if __name__ == "__main__":
@@ -88,4 +89,5 @@ if __name__ == "__main__":
     parser.parse(PATH_TO_VCD_FILE, f_lists)
     parser.export_json(PATH_TO_NEW_JSON)
 
-    compare_json(PATH_TO_NEW_JSON)
+    if not compare_json(PATH_TO_NEW_JSON):
+        sys.exit(1)
