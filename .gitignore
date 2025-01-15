@@ -3,6 +3,8 @@ source/*.json
 designs/*
 backup/
 test.py
+/*.json
+/*.cpp
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

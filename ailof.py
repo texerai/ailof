@@ -13,10 +13,6 @@ import source.flist_formatter as FlistFormatter
 
 from source.enums import ReturnCode
 
-# Constants.
-BACKUP_FILE = "./backup/backup.json"
-
-
 def parse_arguments():
     parser = argparse.ArgumentParser(
         description="Parse VCD and Flist files to extract design information.",
@@ -61,13 +57,13 @@ def main():
     is_parsed, vcd_file_path, flist_file_path, should_undo = parse_arguments()
 
     if should_undo:
-        if os.path.exists(BACKUP_FILE):
-            with open(BACKUP_FILE, "r") as infile:
+        if os.path.exists(RtlPatcher.BACKUP_FILE):
+            with open(RtlPatcher.BACKUP_FILE, "r") as infile:
                 backed_up_data = json.load(infile)
                 for file, code in backed_up_data.items():
                     with open(file, "w") as outfile:
                         outfile.write(code)
-            os.remove(BACKUP_FILE)
+            os.remove(RtlPatcher.BACKUP_FILE)
     # Parse VCD.
     elif is_parsed:
         formatter = FlistFormatter.FlistFormatter()
@@ -91,6 +87,5 @@ def main():
                 is_patched, err_message = rtl_patcher.patch()
                 if not is_patched:
                     print(err_message)
-
 
 main()
