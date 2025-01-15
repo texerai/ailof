@@ -1,5 +1,6 @@
 # Copyright (c) 2024 texer.ai. All rights reserved.
 import json
+import random
 import re
 import sys
 
@@ -10,6 +11,8 @@ REGEX_STRING_MATCH_FULL_MODULE = r"module\s+{}\s*(?:\s+import\s+[\w:]+(?:\*|[\w,
 REGEX_STRING_MATCH_MODULE_PORTS = r"module\s+{}\s*(?:\s+import\s+[\w:]+(?:\*|[\w,]*)\s*;\s*)?\#?\s*\([^;]*?\);"
 REGEX_STRING_MATCH_SIGNAL = r"\b{}\b"
 REGEX_STRING_MATCH_INSTANCE_BEGIN = r"{}\ +(#\([^;]*?\))?\s+\)\ {}\ +\("
+
+BACKUP_FILE = "./backup.json"
 
 
 def is_signal_output(verilog_code, module_name, signal_name):
@@ -188,12 +191,31 @@ class RtlPatcher:
 
         for top_instance, data in top_instances.items():
             import_function = f'import "DPI-C" function void fuzz_{top_instance}('
-            cpp_function = f'extern "C" void fuzz_{top_instance}('
             for signal in data["signals"]:
                 import_function += f"output {signal}, "
-                cpp_function += f"int* {signal}, "
             import_function = import_function[:-2] + ");"
-            cpp_function = cpp_function[:-2] + ")\n{\n\n}\n"
+
+            cpp_function = '#include "logic_fuzzer.h"\n\n'
+            cpp_function += "#include <memory>\n"
+            cpp_function += "#include <vector>\n"
+            cpp_function += "#include <cstdint>\n\n"
+            cpp_function += "static std::vector<std::shared_ptr<lf::LogicFuzzer>> fuzzers;\n\n"
+            cpp_function += 'extern "C" void init()\n{\n'
+            cpp_function += f"    const int kSeed = {random.randint(0, 1000)};\n"
+            cpp_function += f"    for (size_t i = 0; i < {len(top_instances)})\n"
+            cpp_function += "    {\n"
+            cpp_function += "        fuzzers.push_back(std::make_shared<lf::LogicFuzzer>(i + kSeed));\n"
+            cpp_function += "    }\n"
+            cpp_function += "}\n\n"
+
+            cpp_function += f'extern "C" void fuzz_{top_instance}('
+            for signal in data["signals"]:
+                cpp_function += f"int* {signal}, "
+            cpp_function = cpp_function[:-2] + ")\n{\n"
+            i = 0
+            for signal in data["signals"]:
+                cpp_function += f"    {signal} = fuzzers[{i}].Congest();\n"
+            cpp_function += "}"
 
             verilog_code = ""
             try:
@@ -201,7 +223,6 @@ class RtlPatcher:
                     verilog_code = "".join(infile.readlines())
                 with open(data["declaration_path"], "w") as outfile:
                     outfile.write(f"{import_function}\n\n{verilog_code}")
-
                 with open(f"{top_instance}_dpi.cpp", "w") as outfile:
                     outfile.write(cpp_function)
             except Exception as e:
@@ -226,14 +247,25 @@ class RtlPatcher:
                         verilog_code = "".join(infile.readlines())
                     backed_up_files[file_path] = verilog_code
                     seperator = "."
-            with open("./backup/backup.json", "w") as json_file:
+            with open(BACKUP_FILE, "w") as json_file:
                 json.dump(backed_up_files, json_file, indent=4)
         except Exception as e:
             err_message = f"Error: {e}"
             return False, err_message
 
+        # Filter only modules that were selected.
+        # FIXME: Should be refactored. Traverse only signals.
+        selected_signal_modules = {}
+        for signal_hierarchy, signal_data in self.signals_to_punch.items():
+            module_hierarchy = ".".join(signal_hierarchy.split(".")[:-1])
+            if module_hierarchy not in selected_signal_modules:
+                if module_hierarchy in self.selected_modules:
+                    selected_signal_modules[module_hierarchy] = self.selected_modules[module_hierarchy]
+                else:
+                    print(f"Warning: {module_hierarchy} in not in selected modules.")
+
         # Patch.
-        for hierarchy, data in self.selected_modules.items():
+        for hierarchy, data in selected_signal_modules.items():
             module_name = self.json_design_hierarchy[hierarchy]["module_name"]
 
             # Insert gates.

@@ -3,6 +3,8 @@ source/*.json
 designs/*
 backup/
 test.py
+/*.json
+/*.cpp
 test/test_files/designs
 test/test_files/jsons/new_vcd_parser_output.json
 
