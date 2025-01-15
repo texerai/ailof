@@ -14,6 +14,7 @@ REGEX_STRING_MATCH_INSTANCE_BEGIN = r"{}\ +(#\([^;]*?\))?\s+\)\ {}\ +\("
 
 BACKUP_FILE = "./backup.json"
 
+
 def is_signal_output(verilog_code, module_name, signal_name):
     match = re.search(REGEX_STRING_MATCH_MODULE_BEGIN, verilog_code, re.DOTALL)
     if not match:
@@ -194,18 +195,18 @@ class RtlPatcher:
                 import_function += f"output {signal}, "
             import_function = import_function[:-2] + ");"
 
-            cpp_function =  f'#include "logic_fuzzer.h"\n\n';
-            cpp_function += f'#include <memory>\n';
-            cpp_function += f'#include <vector>\n';
-            cpp_function += f'#include <cstdint>\n\n';
-            cpp_function += f'static std::vector<std::shared_ptr<lf::LogicFuzzer>> fuzzers;\n\n';
-            cpp_function +=  'extern "C" void init()\n{\n'
-            cpp_function += f'    const int kSeed = {random.randint(0, 1000)};\n'
-            cpp_function += f'    for (size_t i = 0; i < {len(top_instances)})\n'
-            cpp_function +=  '    {\n'
-            cpp_function +=  '        fuzzers.push_back(std::make_shared<lf::LogicFuzzer>(i + kSeed));\n'
-            cpp_function +=  '    }\n'
-            cpp_function +=  '}\n\n'
+            cpp_function = '#include "logic_fuzzer.h"\n\n'
+            cpp_function += "#include <memory>\n"
+            cpp_function += "#include <vector>\n"
+            cpp_function += "#include <cstdint>\n\n"
+            cpp_function += "static std::vector<std::shared_ptr<lf::LogicFuzzer>> fuzzers;\n\n"
+            cpp_function += 'extern "C" void init()\n{\n'
+            cpp_function += f"    const int kSeed = {random.randint(0, 1000)};\n"
+            cpp_function += f"    for (size_t i = 0; i < {len(top_instances)})\n"
+            cpp_function += "    {\n"
+            cpp_function += "        fuzzers.push_back(std::make_shared<lf::LogicFuzzer>(i + kSeed));\n"
+            cpp_function += "    }\n"
+            cpp_function += "}\n\n"
 
             cpp_function += f'extern "C" void fuzz_{top_instance}('
             for signal in data["signals"]:
@@ -213,7 +214,7 @@ class RtlPatcher:
             cpp_function = cpp_function[:-2] + ")\n{\n"
             i = 0
             for signal in data["signals"]:
-                cpp_function += f'    {signal} = fuzzers[{i}].Congest();\n'
+                cpp_function += f"    {signal} = fuzzers[{i}].Congest();\n"
             cpp_function += "}"
 
             verilog_code = ""

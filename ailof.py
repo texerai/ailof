@@ -13,6 +13,7 @@ import source.flist_formatter as FlistFormatter
 
 from source.enums import ReturnCode
 
+
 def parse_arguments():
     parser = argparse.ArgumentParser(
         description="Parse VCD and Flist files to extract design information.",
@@ -87,5 +88,6 @@ def main():
                 is_patched, err_message = rtl_patcher.patch()
                 if not is_patched:
                     print(err_message)
+
 
 main()
