@@ -104,7 +104,7 @@ class LLMCommunicator:
             data = json.loads(response)
             if "signals" not in data:
                 raise ValueError(f"Unexpected JSON structure: {response}")
-            
+
             validated_signals = [signal for signal in data["signals"] if signal["name"] in signals]
             print(f"Successfully analyzed {module_path}: found {len(validated_signals)} signals.")
             if "note" in data:
