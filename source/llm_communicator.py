@@ -30,17 +30,17 @@ Focus on internal signals of these types:
 
 Respond with ONLY valid JSON in the following format, without any additional text:
 {{
-   "signals": [
-       {{
-           "name": string,            // Use local signal name without hierarchy
-           "certainty": integer,      // Fuzzing safety confidence (0-100)
-           "explanation": string,     // Justification for fuzzing safety
-           "fuzz_method": string,     // "tie_constant"|"logic_gates"|"both"
-           "safe_value": string       // If tie_constant: "0"|"1"|"either"
-       }}
-   ],
-   "note": string  // Optional. Include only for critical design observations
-                   // or potential edge cases. Keep to one sentence.
+    "signals": [
+        {{
+            "name": string,            // Use local signal name without hierarchy
+            "certainty": integer,      // Fuzzing safety confidence (0-100)
+            "explanation": string,     // Justification for fuzzing safety
+            "fuzz_method": string,     // "tie_constant"|"logic_gates"|"both"
+            "safe_value": string       // If tie_constant: "0"|"1"|"either"
+        }}
+    ],
+    "note": string  // Optional. Include only for critical design observations
+                    // or potential edge cases. Keep to one sentence.
 }}
 
 Exclude:
