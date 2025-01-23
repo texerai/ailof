@@ -52,7 +52,7 @@ class VcdParser:
             lines = vcd_file.readlines()
 
         current_path = []
-        skip_level = 0
+        current_scope_type = []
 
         for line in lines:
             line = line.strip()
@@ -63,32 +63,50 @@ class VcdParser:
             scope_union_match = re.match(REGEX_STRING_MATCH_UNION, line)
             signal_match = re.match(REGEX_STRING_MATCH_SIGNAL, line)
 
-            if scope_module_match:
-                if skip_level == 0:
-                    module_name = scope_module_match.group(1)
-                    current_path.append(module_name)
+            if any([scope_module_match, scope_struct_match, scope_interface_match, scope_union_match]):
+                scope_name = (scope_module_match or scope_struct_match or scope_interface_match or scope_union_match).group(1)
 
+                if scope_module_match:
+                    scope_type = "module"
+                elif scope_struct_match:
+                    scope_type = "struct"
+                elif scope_interface_match:
+                    scope_type = "interface"
+                else:
+                    scope_type = "union"
+
+                current_path.append(scope_name)
+                current_scope_type.append(scope_type)
+
+                if scope_type == "module":
                     current_module = self.hierarchy
                     for path_part in current_path:
                         current_module = current_module.setdefault(path_part, {JSON_OBJ_NAME_SIGNALS: {}})
 
-            elif scope_struct_match or scope_interface_match or scope_union_match:
-                skip_level += 1
-
-            if signal_match and skip_level == 0:
+            elif signal_match:
                 signal_width = int(signal_match.group(1))
-                signal_name = signal_match.group(2)
+                full_signal_name = signal_match.group(2)
 
-                current_module = self.hierarchy
-                for path_part in current_path:
-                    current_module = current_module[path_part]
-                current_module[JSON_OBJ_NAME_SIGNALS][signal_name] = signal_width
+                base_signal_name = re.match(r"([^\[]+)", full_signal_name).group(1)
+
+                if current_path:
+                    parent_module_idx = -1
+                    for i in range(len(current_path) - 1, -1, -1):
+                        if current_scope_type[i] == "module":
+                            parent_module_idx = i
+                            break
+
+                    current_module = self.hierarchy
+                    for path_part in current_path[: parent_module_idx + 1]:
+                        current_module = current_module[path_part]
+
+                    current_module[JSON_OBJ_NAME_SIGNALS][full_signal_name] = signal_width
+                    current_module[JSON_OBJ_NAME_SIGNALS][base_signal_name] = signal_width
 
             elif line == STRING_VCD_UNSCOPE:
-                if skip_level > 0:
-                    skip_level -= 1
-                elif current_path:
+                if current_path:
                     current_path.pop()
+                    current_scope_type.pop()
 
     def __process_hierarchy(self, node, current_path="", last_valid_path=""):
         """Processes generated hierarchy tree and builds base for design_info"""
