@@ -5,10 +5,19 @@ import anthropic
 import sys
 import time
 
-SYSTEM_PROMPT = """
-Given a Verilog processor module, identify internal signals (wire, reg, or logic)
-that can be safely fuzzed without affecting core functionality. Do not include
-module ports or instance ports in the analysis. A signal is considered safe if:
+ROLE = "You are a Verilog design verification expert specializing in signal analysis and testability."
+PROMPT = """
+<document>
+    <source>{}</source>
+    <targets>{}</targets>
+    <document_content>
+        {}
+    </document_content>
+</document>
+
+Given a Verilog processor module and a list of target signals, identify which signals 
+can be safely fuzzed without affecting core functionality. Consider only signals from 
+the provided list. A signal is considered safe if:
 - It can be tied to constants (0/1) without breaking the design
 - It can be modified through AND/OR gates while maintaining correct operation
 
@@ -20,19 +29,19 @@ Focus on internal signals of these types:
 - Performance-related signals
 
 Respond with ONLY valid JSON in the following format, without any additional text:
-{
+{{
     "signals": [
-        {
+        {{
             "name": string,            // Use local signal name without hierarchy
             "certainty": integer,      // Fuzzing safety confidence (0-100)
             "explanation": string,     // Justification for fuzzing safety
             "fuzz_method": string,     // "tie_constant"|"logic_gates"|"both"
             "safe_value": string       // If tie_constant: "0"|"1"|"either"
-        }
+        }}
     ],
     "note": string  // Optional. Include only for critical design observations
                     // or potential edge cases. Keep to one sentence.
-}
+}}
 
 Exclude:
 - Module ports (input, output, inout)
@@ -41,53 +50,48 @@ Exclude:
 
 Do not include any explanatory text before or after the JSON output.
 """
+TOKEN_LIMIT = 80000
 
 
 class LLMCommunicator:
     def __init__(self, modules):
         self.modules = modules
-        self.client = anthropic.Anthropic()
+        self.claude = anthropic.Anthropic()
         sys.stdout.write("\x1b[2J\x1b[H")
         print(f"LLMCommunicator is initialized with {len(modules)} modules to process.\n")
 
-    def _read_module_content(self, module_path):
+    def __read_module_content(self, module_path):
         try:
             with open(module_path, "r") as f:
                 return f.read()
         except (IOError, FileNotFoundError) as e:
             raise FileNotFoundError(f"Could not read module at {module_path}: {str(e)}")
 
-    def count_module_tokens(self, module_path):
-        content = self._read_module_content(module_path)
-
-        count = self.client.beta.messages.count_tokens(
+    def count_module_tokens(self, module_content):
+        return self.claude.beta.messages.count_tokens(
             model="claude-3-5-sonnet-20241022",
             messages=[
-                {
-                    "role": "user",
-                    "content": content,
-                },
+                {"role": "user", "content": module_content},
             ],
-        )
-        return count.input_tokens
+        ).input_tokens
 
-    def analyze_module(self, module_path):
+    def analyze_module(self, module_path, signals, module_content):
+        module_name = module_path.split("/")[-1]
         print(f"\nAnalyzing module: {module_path}")
-        content = self._read_module_content(module_path)
         try:
             response = (
-                self.client.messages.create(
+                self.claude.messages.create(
                     model="claude-3-5-sonnet-20241022",
                     max_tokens=1024,
                     temperature=0,
-                    system=SYSTEM_PROMPT,
+                    system=ROLE,
                     messages=[
                         {
                             "role": "user",
                             "content": [
                                 {
                                     "type": "text",
-                                    "text": content,
+                                    "text": PROMPT.format(module_name, signals, module_content),
                                 }
                             ],
                         }
@@ -100,10 +104,13 @@ class LLMCommunicator:
             data = json.loads(response)
             if "signals" not in data:
                 raise ValueError(f"Unexpected JSON structure: {response}")
-            print(f"Successfully analyzed {module_path}: found {len(data['signals'])} signals.")
+
+            validated_signals = [signal for signal in data["signals"] if signal["name"] in signals]
+            print(f"Successfully analyzed {module_path}: found {len(validated_signals)} signals.")
             if "note" in data:
                 print(f"Note: {data['note']}")
-            return data["signals"]
+
+            return validated_signals
 
         except anthropic.APIError as e:
             raise RuntimeError(f"API error while analyzing {module_path}: {str(e)}")
@@ -117,9 +124,11 @@ class LLMCommunicator:
 
         for module_name, module_info in self.modules.items():
             path = module_info["declaration_path"]
-            module_tokens = self.count_module_tokens(path)
+            rtl_patcher_signals = module_info["signal_width_data"].keys()
+            content = self.__read_module_content(path)
+            num_tokens = self.count_module_tokens(content)
 
-            if total_tokens + module_tokens >= 40000:
+            if total_tokens + num_tokens >= TOKEN_LIMIT:
                 time_since_last = time.time() - last_request_time
                 if time_since_last < 60:
                     wait_time = 60 - time_since_last
@@ -129,9 +138,9 @@ class LLMCommunicator:
                 total_tokens = 0
                 last_request_time = time.time()
 
-            total_tokens += module_tokens
-            signals = self.analyze_module(path)
-            self.modules[module_name]["signals"] = signals
+            total_tokens += num_tokens
+            llm_com_signals = self.analyze_module(path, rtl_patcher_signals, content)
+            self.modules[module_name]["signals"] = llm_com_signals
 
         print(f"\nAnalysis complete. Processed {len(self.modules)} modules.\n")
         return self.modules
