@@ -59,5 +59,5 @@ class DesignExplorerTerminalView:
         print("Ailof: AI assisted Logic Fuzzer. Texer.ai Ltd. (c) 2024.\n")
         print("The design is successfully parsed.")
         print("Select the modules in your design you would like to fuzz.\n")
-        print("Press Enter to start.")
+        print("Press any key to start.")
         print("")

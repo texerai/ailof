@@ -28,7 +28,8 @@ class SignalExplorerModel:
     def filter(self, keyword):
         self.working_list = []
         self.working_list_ids = []
+        keyword_lower = keyword.lower()
         for id, item in self.selected_signals.items():
-            if keyword in item:
+            if keyword_lower in item.lower():
                 self.working_list_ids.append(id)
                 self.working_list.append(item)
