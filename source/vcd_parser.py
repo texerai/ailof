@@ -85,7 +85,9 @@ class VcdParser:
 
             elif signal_match:
                 signal_width = int(signal_match.group(1))
-                signal_name = signal_match.group(2)
+                full_signal_name = signal_match.group(2)
+
+                base_signal_name = re.match(r"([^\[]+)", full_signal_name).group(1)
 
                 if current_path:
                     parent_module_idx = -1
@@ -98,7 +100,8 @@ class VcdParser:
                     for path_part in current_path[: parent_module_idx + 1]:
                         current_module = current_module[path_part]
 
-                    current_module[JSON_OBJ_NAME_SIGNALS][signal_name] = signal_width
+                    current_module[JSON_OBJ_NAME_SIGNALS][full_signal_name] = signal_width
+                    current_module[JSON_OBJ_NAME_SIGNALS][base_signal_name] = signal_width
 
             elif line == STRING_VCD_UNSCOPE:
                 if current_path:
