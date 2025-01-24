@@ -51,5 +51,5 @@ class SignalExplorerTerminalView:
 
     def print_message(self):
         print("Now, select the signals you would like to fuzz.\n")
-        print("Press Enter to proceed.")
+        print("Press any key to proceed.")
         print("")
