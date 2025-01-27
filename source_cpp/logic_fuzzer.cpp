@@ -44,6 +44,7 @@ namespace lf
             pimpl_->count = std::rand() % kMaxCount;
             pimpl_->value = !pimpl_->value;
         }
+        pimpl_->count--;
 
         return static_cast<int>(pimpl_->value);
     }

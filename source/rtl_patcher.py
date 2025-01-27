@@ -55,7 +55,6 @@ def insert_gate(design_file_path, module_name, signal_name, internal_signal_name
 
     # Modify the signal to include the gate.
     if is_output_port:
-        gate_logic = f"    wire {signal_name};\n"
         gate_logic += f"    assign {signal_name} = modified_{signal_name} & {internal_signal_name};\n"
     else:
         gate_logic = f"    wire modified_{signal_name};\n"
