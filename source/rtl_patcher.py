@@ -202,7 +202,7 @@ class RtlPatcher:
             cpp_function += "static std::vector<std::shared_ptr<lf::LogicFuzzer>> fuzzers;\n\n"
             cpp_function += 'extern "C" void init()\n{\n'
             cpp_function += f"    const int kSeed = {random.randint(0, 1000)};\n"
-            cpp_function += f"    for (size_t i = 0; i < {len(top_instances)})\n"
+            cpp_function += f"    for (size_t i = 0; i < {len(top_instances)}; ++i)\n"
             cpp_function += "    {\n"
             cpp_function += "        fuzzers.push_back(std::make_shared<lf::LogicFuzzer>(i + kSeed));\n"
             cpp_function += "    }\n"
@@ -214,7 +214,7 @@ class RtlPatcher:
             cpp_function = cpp_function[:-2] + ")\n{\n"
             i = 0
             for signal in data["signals"]:
-                cpp_function += f"    {signal} = fuzzers[{i}].Congest();\n"
+                cpp_function += f"    *{signal} = fuzzers[{i}]->Congest();\n"
             cpp_function += "}"
 
             verilog_code = ""
