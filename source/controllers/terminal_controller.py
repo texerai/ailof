@@ -123,4 +123,14 @@ class DesignExplorerController:
             if return_code == ReturnCode.TERMINATE:
                 break
 
-        return self.selected_modules, return_code
+        # Extract top module name from the first key
+        first_key = next(iter(self.selected_modules))
+        top_module = first_key.split(".")[0]
+        top_module_path = self.model.get_top_module_path(top_module)
+
+        result = {
+            "modules": self.selected_modules,
+            "top_module_info": {top_module: top_module_path},
+        }
+
+        return result, return_code
