@@ -40,5 +40,5 @@ class DesignExplorerModel:
                 self.working_list_ids.append(id)
                 self.working_list.append(item)
 
-    def get_top_module_path(self, top_module):
-        return self.json_design_hierarchy[top_module]["declaration_path"]
+    def get_top_module(self, top_module_name):
+        return self.json_design_hierarchy[top_module_name]

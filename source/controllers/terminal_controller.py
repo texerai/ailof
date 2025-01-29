@@ -125,12 +125,12 @@ class DesignExplorerController:
 
         # Extract top module name from the first key
         first_key = next(iter(self.selected_modules))
-        top_module = first_key.split(".")[0]
-        top_module_path = self.model.get_top_module_path(top_module)
+        top_module_name = first_key.split(".")[0]
+        top_module = self.model.get_top_module(top_module_name)
 
         result = {
-            "modules": self.selected_modules,
-            "top_module_info": {top_module: top_module_path},
+            "selected_modules": self.selected_modules,
+            "top_module": top_module,
         }
 
         return result, return_code

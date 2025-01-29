@@ -6,7 +6,8 @@ import sys
 import time
 
 ROLE = "You are a Verilog design verification expert specializing in signal analysis and testability."
-PROMPT = """
+
+FUZZ_PROMPT = """
 <document>
     <source>{}</source>
     <targets>{}</targets>
@@ -50,15 +51,38 @@ Exclude:
 
 Do not include any explanatory text before or after the JSON output.
 """
+
+CONTROL_SIGNALS_PROMPT = """
+<document>
+    <source>{}</source>
+    <document_content>
+        {}
+    </document_content>
+</document>
+
+Given a Verilog processor top module, identify the primary clock and reset signals 
+that control synchronous logic.
+
+Respond with ONLY valid JSON in the following format, without any additional text:
+{{
+    "clock": string,    // Clock signal name
+    "reset": string,    // Reset signal name
+    "edge": string      // "posedge"|"negedge" for clock
+}}
+
+Do not include any explanatory text before or after the JSON output.
+"""
+
 TOKEN_LIMIT = 80000
 
 
 class LLMCommunicator:
     def __init__(self, modules):
-        self.modules = modules
+        self.modules = modules["selected_modules"]
+        self.top_module = modules["top_module"]
         self.claude = anthropic.Anthropic()
         sys.stdout.write("\x1b[2J\x1b[H")
-        print(f"LLMCommunicator is initialized with {len(modules)} modules to process.\n")
+        print(f"LLMCommunicator is initialized with {len(self.modules)} modules to process.\n")
 
     def __read_module_content(self, module_path):
         try:
@@ -74,6 +98,44 @@ class LLMCommunicator:
                 {"role": "user", "content": module_content},
             ],
         ).input_tokens
+
+    def get_control_signals(self):
+        module_name = self.top_module["module_name"]
+        module_path = self.top_module["declaration_path"]
+        module_content = self.__read_module_content(module_path)
+
+        try:
+            response = (
+                self.claude.messages.create(
+                    model="claude-3-5-sonnet-20241022",
+                    max_tokens=1024,
+                    temperature=0,
+                    system=ROLE,
+                    messages=[
+                        {
+                            "role": "user",
+                            "content": [
+                                {
+                                    "type": "text",
+                                    "text": CONTROL_SIGNALS_PROMPT.format(module_name, module_content),
+                                }
+                            ],
+                        }
+                    ],
+                )
+                .content[0]
+                .text
+            )
+
+            data = json.loads(response)
+            num_tokens = self.count_module_tokens(module_content)
+            # We return num_tokens here to consider the top module when counting the rate limits.
+            return data, num_tokens
+
+        except anthropic.APIError as e:
+            raise RuntimeError(f"API error while analyzing top module {module_path} for control signals: {str(e)}")
+        except json.JSONDecodeError:
+            raise ValueError(f"LLM response is not valid JSON in `get_control_signals()`: {response}")
 
     def analyze_module(self, module_path, signals, module_content):
         module_name = module_path.split("/")[-1]
@@ -91,7 +153,7 @@ class LLMCommunicator:
                             "content": [
                                 {
                                     "type": "text",
-                                    "text": PROMPT.format(module_name, signals, module_content),
+                                    "text": FUZZ_PROMPT.format(module_name, signals, module_content),
                                 }
                             ],
                         }
@@ -115,11 +177,11 @@ class LLMCommunicator:
         except anthropic.APIError as e:
             raise RuntimeError(f"API error while analyzing {module_path}: {str(e)}")
         except json.JSONDecodeError:
-            raise ValueError(f"LLM response is not valid JSON: {response}")
+            raise ValueError(f"LLM response is not valid JSON in `analyze_module()`: {response}")
 
     def run(self):
         print("Starting module analysis...")
-        total_tokens = 0
+        control_signals, total_tokens = self.get_control_signals()
         last_request_time = time.time()
 
         for module_name, module_info in self.modules.items():
@@ -143,4 +205,10 @@ class LLMCommunicator:
             self.modules[module_name]["signals"] = llm_com_signals
 
         print(f"\nAnalysis complete. Processed {len(self.modules)} modules.\n")
-        return self.modules
+
+        result = {
+            "modules_with_signals": self.modules,
+            "control_signals": control_signals,
+        }
+
+        return result
