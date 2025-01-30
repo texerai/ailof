@@ -82,7 +82,7 @@ class LLMCommunicator:
         self.top_module = modules["top_module"]
         self.claude = anthropic.Anthropic()
         sys.stdout.write("\x1b[2J\x1b[H")
-        print(f"LLMCommunicator is initialized with {len(self.modules)} modules to process.\n")
+        print(f"LLMCommunicator is initialized with {len(self.modules)} module(s) to process.\n")
 
     def __read_module_content(self, module_path):
         try:

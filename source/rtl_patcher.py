@@ -11,6 +11,7 @@ REGEX_STRING_MATCH_FULL_MODULE = r"module\s+{}\s*(?:\s+import\s+[\w:]+(?:\*|[\w,
 REGEX_STRING_MATCH_MODULE_PORTS = r"module\s+{}\s*(?:\s+import\s+[\w:]+(?:\*|[\w,]*)\s*;\s*)?\#?\s*\([^;]*?\);"
 REGEX_STRING_MATCH_SIGNAL = r"\b{}\b"
 REGEX_STRING_MATCH_INSTANCE_BEGIN = r"{}\ +(#\([^;]*?\))?\s+\)\ {}\ +\("
+REGEX_STRING_MATCH_IMPORT_FUNCTION = r'import "DPI-C" function void (\w+)\s*\(([^)]*)\);'
 
 BACKUP_FILE = "./backup.json"
 
@@ -115,13 +116,43 @@ def add_port_to_module(file_path, module_name, new_port):
     return True, ""
 
 
+def generate_dpi_always_block(control_signals, import_function):
+    match = re.search(REGEX_STRING_MATCH_IMPORT_FUNCTION, import_function)
+    func_name = match.group(1)
+    params = match.group(2)
+
+    param_list = [param.strip() for param in params.split(",")]
+    cleaned_params = [param.replace("output ", "", 1).strip() for param in param_list]
+    new_params = ", ".join(cleaned_params)
+
+    clock = control_signals["clock"]
+    edge = control_signals["edge"]
+
+    dpi_always_block = f"""
+    always_ff @({edge} {clock}) begin
+        {func_name}({new_params});
+    end"""
+
+    return dpi_always_block
+
+
+def add_dpi_always_block(verilog_code, always_block):
+    parts = verilog_code.rsplit("endmodule", 1)
+    if len(parts) == 2:
+        modified_code = parts[0] + always_block + "\nendmodule" + parts[1]
+        return modified_code
+    else:
+        return verilog_code
+
+
 class RtlPatcher:
     def __init__(self, json_design_hierarchy, selected_modules, signals_to_punch):
-        sys.stdout.write("\x1b[2J\x1b[H")
-        print(f"RTL patcher is initialized with {len(signals_to_punch)} signals to process.\n")
         self.json_design_hierarchy = json_design_hierarchy
-        self.selected_modules = selected_modules
-        self.signals_to_punch = signals_to_punch
+        self.selected_modules = selected_modules["selected_modules"]
+        self.signals_to_punch = signals_to_punch["selected_signals"]
+        self.control_signals = signals_to_punch["control_signals"]
+        sys.stdout.write("\x1b[2J\x1b[H")
+        print(f"RTL patcher is initialized with {len(self.signals_to_punch)} signal(s) to process.\n")
         id = 0
         for signal_hierarchy, signal in self.signals_to_punch.items():
             signal["punch_name"] = f"punch_out_{signal['name']}_{id}"
@@ -222,7 +253,9 @@ class RtlPatcher:
                 with open(data["declaration_path"], "r") as infile:
                     verilog_code = "".join(infile.readlines())
                 with open(data["declaration_path"], "w") as outfile:
-                    outfile.write(f"{import_function}\n\n{verilog_code}")
+                    always_block = generate_dpi_always_block(self.control_signals, import_function)
+                    modified_code = add_dpi_always_block(verilog_code, always_block)
+                    outfile.write(f"{import_function}\n\n{modified_code}")
                 with open(f"{top_instance}_dpi.cpp", "w") as outfile:
                     outfile.write(cpp_function)
             except Exception as e:
