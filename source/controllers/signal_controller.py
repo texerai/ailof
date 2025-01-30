@@ -122,4 +122,9 @@ class SignalExplorerController:
             if return_code == ReturnCode.TERMINATE:
                 break
 
-        return self.selected_signals, return_code
+        result = {
+            "selected_signals": self.selected_signals,
+            "control_signals": self.model.control_signals,
+        }
+
+        return result, return_code

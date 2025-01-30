@@ -3,6 +3,7 @@ class SignalExplorerModel:
     def __init__(self):
         self.all_signals = {}
         self.selected_signals = {}
+        self.control_signals = {}
 
     def flatten_data(self, modules_with_signals):
         flattened = {}
@@ -20,8 +21,9 @@ class SignalExplorerModel:
                 print(f"Warning: {e}")
         return flattened
 
-    def load_signals(self, modules_with_signals):
-        self.all_signals = self.flatten_data(modules_with_signals)
+    def load_signals(self, all_signals):
+        self.all_signals = self.flatten_data(all_signals["modules_with_signals"])
+        self.control_signals = all_signals["control_signals"]
         i = 0
         for signal, data in self.all_signals.items():
             self.selected_signals[i] = f"{signal} | Fuzzing safety confidence: {data['certainty']}"
