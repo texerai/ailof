@@ -6,7 +6,7 @@ import sys
 
 REGEX_STRING_MATCH_MODULE_BEGIN = r"(?i)\bmodule\s+(\w+)\s*(?:\s+import\s+[\w:]+(?:\*|[\w,]*)\s*;\s*)?\#?\s*\(([^;]*?)\)\s*;"
 REGEX_STRING_MATCH_SPEC_MODULE_BEGIN = r"module\s+{}(?:\s+import\s+[\w:.*]+;)?(?:\s*#\(\s*([\s\S]*?)\s*\))?\s*\("
-REGEX_STRING_MATCH_OUTPUT_SIGNAL = r"output(?:\s+(?:wire|logic|reg))?\s+(?:\[.*?\]\s+)?{}\b"
+REGEX_STRING_MATCH_OUTPUT_SIGNAL = r"\boutput\s+(?:wire|logic|reg)?\s*(?:\[.*?\]\s*)?(?:.*,\s*)*{}\s*(?=[,;])"
 REGEX_STRING_MATCH_FULL_MODULE = r"module\s+{}\s*(?:\s+import\s+[\w:]+(?:\*|[\w,]*)\s*;\s*)?\#?\s*\([^;]*?\);\s*(.*?)\s*endmodule"
 REGEX_STRING_MATCH_MODULE_PORTS = r"module\s+{}\s*(?:\s+import\s+[\w:]+(?:\*|[\w,]*)\s*;\s*)?\#?\s*\([^;]*?\);"
 REGEX_STRING_MATCH_SIGNAL = r"\b{}\b"
@@ -34,7 +34,7 @@ def insert_gate(design_file_path, module_name, signal_name, internal_signal_name
     with open(design_file_path, "r") as infile:
         verilog_code = "".join(infile.readlines())
 
-    is_output_port = is_signal_output(verilog_code, module_name, signal_name)
+    is_output_port, error_message = is_signal_output(verilog_code, module_name, signal_name)
 
     match = re.search(REGEX_STRING_MATCH_FULL_MODULE.format(module_name), verilog_code, re.DOTALL)
     if not match:
