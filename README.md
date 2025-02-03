@@ -7,16 +7,16 @@ A Logic Fuzzer is a way to add extra harmless logic inside a hardware design so 
 This tool is ideal for verification and design engineers who closely work with RTL, have implemented a verification environment, and feel relatively confident in the design’s functional correctness. It targets teams looking to push their verification beyond the usual coverage limits, adding extra stress and trying to expose hidden corner cases. Although it’s particularly well-suited for microprocessor projects that incorporate co-simulation techniques, the tool’s benefits extend to any complex design featuring intricate internal handshakes and interactions.
 
 ## How to set up Ailof?
-To get started with Ailof, follow these steps to set up the tool and prepare it for use in your hardware design verification workflow:
+Ailof can be configured to use any LLM, in this instructions we use Anthropic, just as an example. To get started with Ailof, follow these steps to set up the tool and prepare it for use in your hardware design verification workflow:
 
 ### Step 1: Install the Anthropic Python API Library
-Ailof relies on the Anthropic Python API to interact with its integrated Large Language Model (LLM). To install the library, run the following command in your terminal:
+To install the Anthropic Python API, run the following command in your terminal:
   ```bash 
   python -m pip install anthropic
   ```
 
 ### Step 2: Set Essential Environment Variables
-Ensure that your system is configured with the required environment variables. These variables are necessary for Ailof to operate correctly.
+Ensure that your system is configured with the required environment variables. These variables are necessary for Ailof to operate correctly. For example, for CVA6 opensource processor, infrastructure expect the following environmental variables: `TARGET=CFD`, `HPDCACHE_DIR`, `CVA6_REPO_DIR`.
 
 ### Step 3: Set the Anthropic API Key
 To enable communication with the Anthropic API, you need to set your Anthropic API key as an environment variable. Run the following command in your terminal, replacing `"sk-your-anthropic-api-key"` with your actual API key:
