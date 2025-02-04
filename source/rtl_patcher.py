@@ -136,10 +136,10 @@ def generate_dpi_always_block(control_signals, import_function):
     return dpi_always_block
 
 
-def add_dpi_always_block(verilog_code, always_block):
+def add_dpi_calls(verilog_code, initial_block, always_block):
     parts = verilog_code.rsplit("endmodule", 1)
     if len(parts) == 2:
-        modified_code = parts[0] + always_block + "\nendmodule" + parts[1]
+        modified_code = parts[0] + "\n" + initial_block + always_block + "\nendmodule" + parts[1]
         return modified_code
     else:
         return verilog_code
@@ -221,10 +221,16 @@ class RtlPatcher:
                 top_instances[top_instance]["signals"].append(gate_input_name)
 
         for top_instance, data in top_instances.items():
-            import_function = f'import "DPI-C" function void fuzz_{top_instance}('
+            import_init_function = 'import "DPI-C" function void init();'
+            import_fuzz_function = f'import "DPI-C" function void fuzz_{top_instance}('
             for signal in data["signals"]:
-                import_function += f"output {signal}, "
-            import_function = import_function[:-2] + ");"
+                import_fuzz_function += f"output {signal}, "
+            import_fuzz_function = import_fuzz_function[:-2] + ");"
+
+            initial_block = "    initial begin\n"
+            initial_block += "        init();\n"
+            initial_block += "    end\n"
+            always_block = generate_dpi_always_block(self.control_signals, import_fuzz_function)
 
             cpp_function = '#include "logic_fuzzer.h"\n\n'
             cpp_function += "#include <memory>\n"
@@ -253,9 +259,8 @@ class RtlPatcher:
                 with open(data["declaration_path"], "r") as infile:
                     verilog_code = "".join(infile.readlines())
                 with open(data["declaration_path"], "w") as outfile:
-                    always_block = generate_dpi_always_block(self.control_signals, import_function)
-                    modified_code = add_dpi_always_block(verilog_code, always_block)
-                    outfile.write(f"{import_function}\n\n{modified_code}")
+                    modified_code = add_dpi_calls(verilog_code, initial_block, always_block)
+                    outfile.write(f"{import_init_function}\n{import_fuzz_function}\n\n{modified_code}")
                 with open(f"{top_instance}_dpi.cpp", "w") as outfile:
                     outfile.write(cpp_function)
             except Exception as e:
