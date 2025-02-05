@@ -1,9 +1,10 @@
 # Copyright (c) 2024 texer.ai. All rights reserved.
 
 import json
-import anthropic
+import ollama
 import sys
 import time
+import re
 
 ROLE = "You are a Verilog design verification expert specializing in signal analysis and testability."
 PROMPT = """
@@ -44,21 +45,29 @@ Respond with ONLY valid JSON in the following format, without any additional tex
 }}
 
 Exclude:
-- Module ports (input, output, inout)
 - Instance ports (connections to submodule instances)
 - Any signals that might affect functionality under specific conditions
 
 Do not include any explanatory text before or after the JSON output.
 """
+
 TOKEN_LIMIT = 80000
 
 
 class LLMCommunicator:
-    def __init__(self, modules):
+    def __init__(self, modules, model_name="qwen2.5:14b"):
+        """
+        Initialize with a dictionary of modules and a model name for Ollama.
+        The 'modules' dict is expected to have the following structure per module:
+            {
+                "declaration_path": <path to Verilog file>,
+                "signal_width_data": { <signal_name>: <width>, ... }
+            }
+        """
         self.modules = modules
-        self.claude = anthropic.Anthropic()
+        self.model_name = model_name
         sys.stdout.write("\x1b[2J\x1b[H")
-        print(f"LLMCommunicator is initialized with {len(modules)} modules to process.\n")
+        print(f"LLMCommunicator is initialized with {len(modules)} modules to process using model: {self.model_name}\n")
 
     def __read_module_content(self, module_path):
         try:
@@ -68,43 +77,45 @@ class LLMCommunicator:
             raise FileNotFoundError(f"Could not read module at {module_path}: {str(e)}")
 
     def count_module_tokens(self, module_content):
-        return self.claude.beta.messages.count_tokens(
-            model="claude-3-5-sonnet-20241022",
-            messages=[
-                {"role": "user", "content": module_content},
-            ],
-        ).input_tokens
+        # Simple token count approximation: count whitespace-separated tokens.
+        return len(module_content.split())
+
+    def clean_json_response(self, response_text):
+        """
+        Remove markdown formatting, code blocks, and comments from the response.
+        """
+        content = response_text.strip()
+        if "```json" in content:
+            content = content.split("```json")[1].split("```")[0]
+        elif "```" in content:
+            content = content.split("```")[1].split("```")[0]
+        content = content.strip()
+        content = re.sub(r'\s*//.*$', '', content, flags=re.MULTILINE)
+        content = re.sub(r'^[\s\n]*```.*?```[\s\n]*$', '', content, flags=re.MULTILINE | re.DOTALL)
+        return content
 
     def analyze_module(self, module_path, signals, module_content):
         module_name = module_path.split("/")[-1]
         print(f"\nAnalyzing module: {module_path}")
+        # Format the prompt with the module name, the list of target signals, and file content.
+        prompt = PROMPT.format(module_name, list(signals), module_content)
         try:
-            response = (
-                self.claude.messages.create(
-                    model="claude-3-5-sonnet-20241022",
-                    max_tokens=1024,
-                    temperature=0,
-                    system=ROLE,
-                    messages=[
-                        {
-                            "role": "user",
-                            "content": [
-                                {
-                                    "type": "text",
-                                    "text": PROMPT.format(module_name, signals, module_content),
-                                }
-                            ],
-                        }
-                    ],
-                )
-                .content[0]
-                .text
+            response = ollama.chat(
+                model=self.model_name,
+                messages=[
+                    {"role": "system", "content": ROLE},
+                    {"role": "user", "content": prompt},
+                ]
+                # Removed unsupported 'max_tokens' and 'temperature' parameters.
             )
-
-            data = json.loads(response)
+            # Get the response text and clean it up
+            response_text = response.message.content
+            cleaned_response = self.clean_json_response(response_text)
+            data = json.loads(cleaned_response)
             if "signals" not in data:
-                raise ValueError(f"Unexpected JSON structure: {response}")
+                raise ValueError(f"Unexpected JSON structure: {cleaned_response}")
 
+            # Only include signals that are in the provided target list.
             validated_signals = [signal for signal in data["signals"] if signal["name"] in signals]
             print(f"Successfully analyzed {module_path}: found {len(validated_signals)} signals.")
             if "note" in data:
@@ -112,10 +123,8 @@ class LLMCommunicator:
 
             return validated_signals
 
-        except anthropic.APIError as e:
-            raise RuntimeError(f"API error while analyzing {module_path}: {str(e)}")
-        except json.JSONDecodeError:
-            raise ValueError(f"LLM response is not valid JSON: {response}")
+        except Exception as e:
+            raise RuntimeError(f"Error while analyzing {module_path}: {str(e)}")
 
     def run(self):
         print("Starting module analysis...")
@@ -128,13 +137,13 @@ class LLMCommunicator:
             content = self.__read_module_content(path)
             num_tokens = self.count_module_tokens(content)
 
+            # If approaching token limit, wait to avoid rate limiting.
             if total_tokens + num_tokens >= TOKEN_LIMIT:
                 time_since_last = time.time() - last_request_time
                 if time_since_last < 60:
                     wait_time = 60 - time_since_last
                     print(f"\nApproaching rate limit. Waiting {wait_time:.1f} seconds...")
                     time.sleep(wait_time)
-
                 total_tokens = 0
                 last_request_time = time.time()
 
@@ -144,3 +153,24 @@ class LLMCommunicator:
 
         print(f"\nAnalysis complete. Processed {len(self.modules)} modules.\n")
         return self.modules
+
+
+if __name__ == "__main__":
+    # Example modules dictionary.
+    # In a real system, this would be provided by another part of your system.
+    modules = {
+        "module1": {
+            "declaration_path": "rtl/module1.v",  # Replace with the actual path to your file.
+            "signal_width_data": {"signal_a": 1, "signal_b": 2},
+        },
+        "module2": {
+            "declaration_path": "rtl/module2.v",  # Replace with the actual path to your file.
+            "signal_width_data": {"signal_c": 1, "signal_d": 2},
+        },
+    }
+
+    # Set the desired model here.
+    model_name = "qwen2.5:14b"
+    communicator = LLMCommunicator(modules, model_name=model_name)
+    results = communicator.run()
+    print(json.dumps(results, indent=4))
