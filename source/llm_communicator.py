@@ -16,10 +16,9 @@ FUZZ_PROMPT = """
     </document_content>
 </document>
 
-Given a Verilog processor module and a list of target signals, identify which signals 
-can be safely fuzzed without affecting core functionality. Consider only signals from 
-the provided list. A signal is considered safe if:
-- It can be tied to constants (0/1) without breaking the design
+Given a Verilog processor module and a list of target signals, identify which signals
+can be safely fuzzed (randomized) without affecting core functionality. Consider only
+signals from the provided list. A signal is considered safe if:
 - It can be modified through AND/OR gates while maintaining correct operation
 
 Focus on internal signals of these types:
@@ -36,8 +35,6 @@ Respond with ONLY valid JSON in the following format, without any additional tex
             "name": string,            // Use local signal name without hierarchy
             "certainty": integer,      // Fuzzing safety confidence (0-100)
             "explanation": string,     // Justification for fuzzing safety
-            "fuzz_method": string,     // "tie_constant"|"logic_gates"|"both"
-            "safe_value": string       // If tie_constant: "0"|"1"|"either"
         }}
     ],
     "note": string  // Optional. Include only for critical design observations
@@ -45,9 +42,7 @@ Respond with ONLY valid JSON in the following format, without any additional tex
 }}
 
 Exclude:
-- Module ports (input, output, inout)
 - Instance ports (connections to submodule instances)
-- Any signals that might affect functionality under specific conditions
 
 Do not include any explanatory text before or after the JSON output.
 """
