@@ -7,6 +7,7 @@ import sys
 REGEX_STRING_MATCH_MODULE_BEGIN = r"(?i)\bmodule\s+(\w+)\s*(?:\s+import\s+[\w:]+(?:\*|[\w,]*)\s*;\s*)?\#?\s*\(([^;]*?)\)\s*;"
 REGEX_STRING_MATCH_SPEC_MODULE_BEGIN = r"module\s+{}(?:\s+import\s+[\w:.*]+;)?(?:\s*#\(\s*([\s\S]*?)\s*\))?\s*\("
 REGEX_STRING_MATCH_OUTPUT_SIGNAL = r"\boutput\s+(?:wire|logic|reg)?\s*(?:\[.*?\]\s*)?(?:.*,\s*)*{}\s*(?=[,;])"
+REGEX_STRING_MATCH_INPUT_SIGNAL = r"\binput\s+(?:wire|logic|reg)?\s*(?:\[.*?\]\s*)?(?:.*,\s*)*{}\s*(?=[,;])"
 REGEX_STRING_MATCH_FULL_MODULE = r"module\s+{}\s*(?:\s+import\s+[\w:]+(?:\*|[\w,]*)\s*;\s*)?\#?\s*\([^;]*?\);\s*(.*?)\s*endmodule"
 REGEX_STRING_MATCH_MODULE_PORTS = r"module\s+{}\s*(?:\s+import\s+[\w:]+(?:\*|[\w,]*)\s*;\s*)?\#?\s*\([^;]*?\);"
 REGEX_STRING_MATCH_SIGNAL = r"\b{}\b"
@@ -15,28 +16,67 @@ REGEX_STRING_MATCH_INSTANCE_BEGIN = r"{}\ +(#\([^;]*?\))?\s+\)\ {}\ +\("
 BACKUP_FILE = "./backup.json"
 
 
-def is_signal_output(verilog_code, module_name, signal_name):
+def is_signal_output(verilog_code, signal_name):
     match = re.search(REGEX_STRING_MATCH_MODULE_BEGIN, verilog_code, re.DOTALL)
     if not match:
-        err_message = f"Error: Module not found {module_name}"
-        return False, err_message
+        return False
 
     module_declaration = match.group(0)
     if re.search(REGEX_STRING_MATCH_OUTPUT_SIGNAL.format(signal_name), module_declaration) is None:
-        err_message = f"Error: Signal {signal_name} not found."
-        return False, err_message
+        return False
 
-    return True, ""
+    return True
+
+
+def is_signal_input(verilog_code, signal_name):
+    match = re.search(REGEX_STRING_MATCH_MODULE_BEGIN, verilog_code, re.DOTALL)
+    if not match:
+        return False
+
+    module_declaration = match.group(0)
+    if re.search(REGEX_STRING_MATCH_INPUT_SIGNAL.format(signal_name), module_declaration) is None:
+        return False
+
+    return True
+
+
+def replace_internal_signal(signal_name, module_body):
+    lines = module_body.split("\n")
+
+    for i, line in enumerate(lines):
+        if not line.strip():
+            continue
+
+        eq_pos = line.find("=")
+        le_pos = line.find("<=")
+
+        if eq_pos == -1 and le_pos == -1:
+            continue
+
+        op_pos = le_pos if le_pos != -1 else eq_pos
+
+        left_part = line[:op_pos].strip()
+        right_part = line[op_pos:].strip()
+
+        modified_right_part = re.sub(rf"\b{signal_name}\b", f"modified_{signal_name}", right_part)
+
+        if right_part != modified_right_part:
+            lines[i] = f"{left_part} {modified_right_part}"
+
+    return "\n".join(lines)
 
 
 def insert_gate(design_file_path, module_name, signal_name, internal_signal_name):
     verilog_code = ""
+
     with open(design_file_path, "r") as infile:
         verilog_code = "".join(infile.readlines())
 
-    is_output_port, error_message = is_signal_output(verilog_code, module_name, signal_name)
+    is_output_port = is_signal_output(verilog_code, signal_name)
+    is_input_port = is_signal_input(verilog_code, signal_name)
 
     match = re.search(REGEX_STRING_MATCH_FULL_MODULE.format(module_name), verilog_code, re.DOTALL)
+
     if not match:
         err_message = f"Module '{module_name}' not found in the Verilog code."
         return False, err_message
@@ -54,13 +94,20 @@ def insert_gate(design_file_path, module_name, signal_name, internal_signal_name
         return False, err_message
 
     # Modify the signal to include the gate.
-    if is_output_port:
-        gate_logic = f"    assign {signal_name} = modified_{signal_name} & {internal_signal_name};\n"
-    else:
-        gate_logic = f"    wire modified_{signal_name};\n"
-        gate_logic += f"    assign modified_{signal_name} = {signal_name} & {internal_signal_name};\n"
+    modified_signal_name = f"modified_{signal_name}"
 
-    modified_body = re.sub(rf"(?<!\w){signal_name}(?!\w)", rf"modified_{signal_name}", module_body)
+    if is_output_port:
+        gate_logic = f"    assign {signal_name} = {modified_signal_name} & {internal_signal_name};\n"
+        modified_body = re.sub(rf"(?<!\w){signal_name}(?!\w)", modified_signal_name, module_body)
+    else:
+        gate_logic = f"    wire {modified_signal_name};\n"
+        gate_logic += f"    assign {modified_signal_name} = {signal_name} & {internal_signal_name};\n"
+
+        if is_input_port:
+            modified_body = re.sub(rf"(?<!\w){signal_name}(?!\w)", modified_signal_name, module_body)
+        else:
+            modified_body = replace_internal_signal(signal_name, module_body)
+
     modified_body = gate_logic + modified_body
     modified_code = f"{module_definition}\n{modified_body}\nendmodule"
 
