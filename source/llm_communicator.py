@@ -6,6 +6,7 @@ import sys
 import time
 
 ROLE = "You are a Verilog design verification expert specializing in signal analysis and testability."
+
 PROMPT = """
 <document>
     <source>{}</source>
@@ -15,11 +16,10 @@ PROMPT = """
     </document_content>
 </document>
 
-Given a Verilog processor module and a list of target signals, identify which signals 
-can be safely fuzzed without affecting core functionality. Consider only signals from 
-the provided list. A signal is considered safe if:
-- It can be tied to constants (0/1) without breaking the design
-- It can be modified through AND/OR gates while maintaining correct operation
+Given a Verilog processor module and a list of target signals, identify which signals
+can be safely fuzzed (randomized) without affecting core functionality. Consider only
+signals from the provided list. A signal is considered safe if:
+- It can be modified through AND/OR gates while maintaining correct operation.
 
 Focus on internal signals of these types:
 - Handshake/flow control signals
@@ -28,28 +28,34 @@ Focus on internal signals of these types:
 - Optional feature controls
 - Performance-related signals
 
+Exclude:
+- Instance ports (connections to submodule instances)
+
+Also, identify the primary clock and reset signals that control synchronous logic.
+
 Respond with ONLY valid JSON in the following format, without any additional text:
 {{
-    "signals": [
-        {{
-            "name": string,            // Use local signal name without hierarchy
-            "certainty": integer,      // Fuzzing safety confidence (0-100)
-            "explanation": string,     // Justification for fuzzing safety
-            "fuzz_method": string,     // "tie_constant"|"logic_gates"|"both"
-            "safe_value": string       // If tie_constant: "0"|"1"|"either"
-        }}
-    ],
-    "note": string  // Optional. Include only for critical design observations
-                    // or potential edge cases. Keep to one sentence.
+    "fuzz_candidates": {{
+        "signals": [
+            {{
+                "name": string,            // Use local signal name without hierarchy
+                "certainty": integer,      // Fuzzing safety confidence (0-100)
+                "explanation": string      // Justification for fuzzing safety
+            }}
+        ],
+        "note": string  // Optional. Include only for critical design observations
+                        // or potential edge cases. Keep to one sentence.
+    }},
+    "control_signals": {{
+        "clock": string,    // Clock signal name
+        "reset": string,    // Reset signal name
+        "edge": string      // "posedge"|"negedge" for clock
+    }}
 }}
-
-Exclude:
-- Module ports (input, output, inout)
-- Instance ports (connections to submodule instances)
-- Any signals that might affect functionality under specific conditions
 
 Do not include any explanatory text before or after the JSON output.
 """
+
 TOKEN_LIMIT = 80000
 
 
@@ -58,7 +64,7 @@ class LLMCommunicator:
         self.modules = modules
         self.claude = anthropic.Anthropic()
         sys.stdout.write("\x1b[2J\x1b[H")
-        print(f"LLMCommunicator is initialized with {len(modules)} modules to process.\n")
+        print(f"LLMCommunicator is initialized with {len(self.modules)} module(s) to process.\n")
 
     def __read_module_content(self, module_path):
         try:
@@ -102,20 +108,20 @@ class LLMCommunicator:
             )
 
             data = json.loads(response)
-            if "signals" not in data:
-                raise ValueError(f"Unexpected JSON structure: {response}")
 
-            validated_signals = [signal for signal in data["signals"] if signal["name"] in signals]
-            print(f"Successfully analyzed {module_path}: found {len(validated_signals)} signals.")
-            if "note" in data:
-                print(f"Note: {data['note']}")
+            validated_fuzz_candidates = [signal for signal in data["fuzz_candidates"]["signals"] if signal["name"] in signals]
+            control_signals = data["control_signals"]
 
-            return validated_signals
+            print(f"Successfully analyzed {module_path}: found {len(validated_fuzz_candidates)} signals.")
+            if "note" in data["fuzz_candidates"]:
+                print(f"Note: {data['fuzz_candidates']['note']}")
+
+            return validated_fuzz_candidates, control_signals
 
         except anthropic.APIError as e:
             raise RuntimeError(f"API error while analyzing {module_path}: {str(e)}")
         except json.JSONDecodeError:
-            raise ValueError(f"LLM response is not valid JSON: {response}")
+            raise ValueError(f"LLM response is not a valid JSON: {response}")
 
     def run(self):
         print("Starting module analysis...")
@@ -139,8 +145,9 @@ class LLMCommunicator:
                 last_request_time = time.time()
 
             total_tokens += num_tokens
-            llm_com_signals = self.analyze_module(path, rtl_patcher_signals, content)
-            self.modules[module_name]["signals"] = llm_com_signals
+            fuzz_candidates, control_signals = self.analyze_module(path, rtl_patcher_signals, content)
+            self.modules[module_name]["fuzz_candidates"] = fuzz_candidates
+            self.modules[module_name]["control_signals"] = control_signals
 
         print(f"\nAnalysis complete. Processed {len(self.modules)} modules.\n")
         return self.modules
