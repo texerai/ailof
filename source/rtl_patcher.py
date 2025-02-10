@@ -4,43 +4,144 @@ import random
 import re
 import sys
 
-REGEX_STRING_MATCH_MODULE_BEGIN = r"(?i)\bmodule\s+(\w+)\s*(?:\s+import\s+[\w:]+(?:\*|[\w,]*)\s*;\s*)?\#?\s*\(([^;]*?)\)\s*;"
 REGEX_STRING_MATCH_SPEC_MODULE_BEGIN = r"module\s+{}(?:\s+import\s+[\w:.*]+;)?(?:\s*#\(\s*([\s\S]*?)\s*\))?\s*\("
 REGEX_STRING_MATCH_OUTPUT_SIGNAL = r"\boutput\s+(?:wire|logic|reg)?\s*(?:\[.*?\]\s*)?(?:.*,\s*)*{}\s*(?=[,;])"
 REGEX_STRING_MATCH_INPUT_SIGNAL = r"\binput\s+(?:wire|logic|reg)?\s*(?:\[.*?\]\s*)?(?:.*,\s*)*{}\s*(?=[,;])"
-REGEX_STRING_MATCH_FULL_MODULE = r"module\s+{}\s*(?:\s+import\s+[\w:]+(?:\*|[\w,]*)\s*;\s*)?\#?\s*\([^;]*?\);\s*(.*?)\s*endmodule"
 REGEX_STRING_MATCH_MODULE_PORTS = r"module\s+{}\s*(?:\s+import\s+[\w:]+(?:\*|[\w,]*)\s*;\s*)?\#?\s*\([^;]*?\);"
-REGEX_STRING_MATCH_SIGNAL = r"\b{}\b"
+REGEX_STRING_MATCH_SIGNAL = r"(?<![\w.]){}\b(?![\w.])"
 REGEX_STRING_MATCH_INSTANCE_BEGIN = r"{}\ +(#\([^;]*?\))?\s+\)\ {}\ +\("
 
 BACKUP_FILE = "./backup.json"
 
 
-def is_signal_output(verilog_code, signal_name):
-    match = re.search(REGEX_STRING_MATCH_MODULE_BEGIN, verilog_code, re.DOTALL)
-    if not match:
+def __find_module_declaration(verilog_code):
+    """
+    A function to find the module declaration in the Verilog code.
+    """
+    lines = verilog_code.split("\n")
+    declaration = []
+    in_module = False
+    paren_count = 0
+
+    for line in lines:
+        line = re.sub(r"//.*$", "", line)
+
+        if not in_module:
+            if re.match(r"\s*module\s+\w+", line):
+                in_module = True
+                declaration.append(line)
+                paren_count = line.count("(") - line.count(")")
+                if paren_count == 0 and ";" in line:
+                    return "\n".join(declaration)
+                continue
+        else:
+            declaration.append(line)
+            paren_count += line.count("(") - line.count(")")
+            if paren_count == 0 and ";" in line:
+                return "\n".join(declaration)
+
+
+def __is_signal_port(verilog_code, signal_name, port_type):
+    """
+    A function to check if the signal is a input or output port of the module.
+    """
+    module_decl = __find_module_declaration(verilog_code)
+    
+    if not module_decl:
         return False
 
-    module_declaration = match.group(0)
-    if re.search(REGEX_STRING_MATCH_OUTPUT_SIGNAL.format(signal_name), module_declaration) is None:
-        return False
+    lines = [line.strip() for line in module_decl.split("\n")]
 
-    return True
+    merged_lines = []
+    current_line = ""
+    for line in lines:
+        if not line or line.isspace():
+            continue
+
+        line = re.sub(r"//.*$", "", line)
+        current_line += " " + line
+        if not line.rstrip().endswith(","):
+            merged_lines.append(current_line.strip())
+            current_line = ""
+
+    for line in merged_lines:
+        if not line.startswith(port_type):
+            continue
+
+        port_list = re.sub(r"^" + port_type + r"\s+(wire|reg|logic)?\s*", "", line)
+
+        port_list = re.sub(r"\[.*?\]", "", port_list)
+
+        ports = [p.strip() for p in port_list.split(",")]
+
+        if signal_name in ports:
+            return True
+
+    return False
 
 
-def is_signal_input(verilog_code, signal_name):
-    match = re.search(REGEX_STRING_MATCH_MODULE_BEGIN, verilog_code, re.DOTALL)
-    if not match:
-        return False
+def __extract_module_parts(verilog_code, module_name):
+    """
+    A function to extract the header, definition and body of the module from the Verilog code.
+    """
+    module_pattern = f"module\\s+{module_name}\\s*"
+    module_match = re.search(module_pattern, verilog_code)
+    if not module_match:
+        return None, None, None
 
-    module_declaration = match.group(0)
-    if re.search(REGEX_STRING_MATCH_INPUT_SIGNAL.format(signal_name), module_declaration) is None:
-        return False
+    header_content = verilog_code[: module_match.start()].strip()
 
-    return True
+    start_pos = module_match.start()
+    pos = module_match.end()
+
+    paren_count = 0
+    port_start = None
+    port_end = None
+
+    while pos < len(verilog_code):
+        char = verilog_code[pos]
+        if char == "(":
+            if paren_count == 0:
+                port_start = pos
+            paren_count += 1
+        elif char == ")":
+            paren_count -= 1
+            if paren_count == 0:
+                port_end = pos + 1
+                break
+        pos += 1
+
+    if port_start is None or port_end is None:
+        return None, None, None
+
+    # Find the semicolon after port list
+    pos = port_end
+    while pos < len(verilog_code) and verilog_code[pos] != ";":
+        pos += 1
+    if pos >= len(verilog_code):
+        return None, None, None
+
+    module_definition = verilog_code[start_pos : pos + 1]
+
+    # Find module body (everything between module definition and matching endmodule)
+    body_start = pos + 1
+    pos = body_start
+
+    while pos < len(verilog_code):
+        # Look for "endmodule" keyword
+        if verilog_code[pos:].lstrip().startswith("endmodule"):
+            # Extract body excluding the endmodule keyword
+            module_body = verilog_code[body_start:pos].strip()
+            return header_content, module_definition, module_body
+        pos += 1
+
+    return None, None, None
 
 
-def replace_internal_signal(signal_name, module_body):
+def __replace_internal_signal(signal_name, module_body):
+    """
+    A function to replace the internal signal with the modified signal.
+    """
     lines = module_body.split("\n")
 
     for i, line in enumerate(lines):
@@ -67,35 +168,32 @@ def replace_internal_signal(signal_name, module_body):
 
 
 def insert_gate(design_file_path, module_name, signal_name, internal_signal_name):
+    """
+    A function to insert a AND gate logic for particular signal into the Verilog code.
+    """
     verilog_code = ""
 
     with open(design_file_path, "r") as infile:
         verilog_code = "".join(infile.readlines())
 
-    is_output_port = is_signal_output(verilog_code, signal_name)
-    is_input_port = is_signal_input(verilog_code, signal_name)
+    # Check if the signal is a output or input port of the module.
+    is_output_port = __is_signal_port(verilog_code, signal_name, "output")
+    is_input_port = __is_signal_port(verilog_code, signal_name, "input")
 
-    match = re.search(REGEX_STRING_MATCH_FULL_MODULE.format(module_name), verilog_code, re.DOTALL)
+    header_content, module_definition, module_body = __extract_module_parts(verilog_code, module_name)
 
-    if not match:
-        err_message = f"Module '{module_name}' not found in the Verilog code."
+    if module_definition is None:
+        err_message = f"Error: Module '{module_name}' not found in the Verilog code."
         return False, err_message
 
-    module_body = match.group(1)
-
-    match = re.search(REGEX_STRING_MATCH_MODULE_PORTS.format(module_name), verilog_code, re.DOTALL)
-    module_definition = match.group(0)
-
-    # Check if the signal exists in the module
-    # It is quite possible that the signal in the port is never used
-    # in the implementation. So just output the warning.
+    # Check if the signal is used in the module.
     if not re.search(REGEX_STRING_MATCH_SIGNAL.format(signal_name), module_body):
         err_message = f"Warning: Signal '{signal_name}' not found in module '{module_name}'."
         return False, err_message
 
-    # Modify the signal to include the gate.
     modified_signal_name = f"modified_{signal_name}"
 
+    # Insert the gate logic into the Verilog code.
     if is_output_port:
         gate_logic = f"    assign {signal_name} = {modified_signal_name} & {internal_signal_name};\n"
         modified_body = re.sub(rf"(?<!\w){signal_name}(?!\w)", modified_signal_name, module_body)
@@ -106,10 +204,10 @@ def insert_gate(design_file_path, module_name, signal_name, internal_signal_name
         if is_input_port:
             modified_body = re.sub(rf"(?<!\w){signal_name}(?!\w)", modified_signal_name, module_body)
         else:
-            modified_body = replace_internal_signal(signal_name, module_body)
+            modified_body = __replace_internal_signal(signal_name, module_body)
 
     modified_body = gate_logic + modified_body
-    modified_code = f"{module_definition}\n{modified_body}\nendmodule"
+    modified_code = f"{header_content}\n\n{module_definition}\n{modified_body}\nendmodule"
 
     with open(design_file_path, "w") as out_file:
         out_file.write(modified_code)
