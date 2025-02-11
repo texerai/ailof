@@ -4,20 +4,21 @@ import random
 import re
 import sys
 
+from source.enums import ReturnCode
+
 REGEX_STRING_MATCH_SPEC_MODULE_BEGIN = r"module\s+{}(?:\s+import\s+[\w:.*]+;)?(?:\s*#\(\s*([\s\S]*?)\s*\))?\s*\("
-REGEX_STRING_MATCH_OUTPUT_SIGNAL = r"\boutput\s+(?:wire|logic|reg)?\s*(?:\[.*?\]\s*)?(?:.*,\s*)*{}\s*(?=[,;])"
-REGEX_STRING_MATCH_INPUT_SIGNAL = r"\binput\s+(?:wire|logic|reg)?\s*(?:\[.*?\]\s*)?(?:.*,\s*)*{}\s*(?=[,;])"
 REGEX_STRING_MATCH_MODULE_PORTS = r"module\s+{}\s*(?:\s+import\s+[\w:]+(?:\*|[\w,]*)\s*;\s*)?\#?\s*\([^;]*?\);"
+REGEX_STRING_MATCH_INPUT_SIGNAL = r"\binput\s+(?:wire|logic|reg)?\s*(?:\[.*?\]\s*)?(?:.*,\s*)*{}\s*(?=[,;])"
+REGEX_STRING_MATCH_OUTPUT_SIGNAL = r"\boutput\s+(?:wire|logic|reg)?\s*(?:\[.*?\]\s*)?(?:.*,\s*)*{}\s*(?=[,;])"
 REGEX_STRING_MATCH_SIGNAL = r"(?<![\w.]){}\b(?![\w.])"
 REGEX_STRING_MATCH_INSTANCE_BEGIN = r"{}\ +(#\([^;]*?\))?\s+\)\ {}\ +\("
+REGEX_STRING_MATCH_IMPORT_FUNCTION = r'import "DPI-C" function void (\w+)\s*\(([^)]*)\);'
 
 BACKUP_FILE = "./backup.json"
 
 
-def __find_module_declaration(verilog_code):
-    """
-    A function to find the module declaration in the Verilog code.
-    """
+def find_module_declaration(verilog_code):
+    # A function to find the module declaration in the Verilog code.
     lines = verilog_code.split("\n")
     declaration = []
     in_module = False
@@ -41,12 +42,10 @@ def __find_module_declaration(verilog_code):
                 return "\n".join(declaration)
 
 
-def __is_signal_port(verilog_code, signal_name, port_type):
-    """
-    A function to check if the signal is a input or output port of the module.
-    """
-    module_decl = __find_module_declaration(verilog_code)
-    
+def is_signal_port(verilog_code, signal, port_type):
+    # A function to check if the signal is a input or output port of the module.
+    module_decl = find_module_declaration(verilog_code)
+
     if not module_decl:
         return False
 
@@ -74,16 +73,14 @@ def __is_signal_port(verilog_code, signal_name, port_type):
 
         ports = [p.strip() for p in port_list.split(",")]
 
-        if signal_name in ports:
+        if signal in ports:
             return True
 
     return False
 
 
-def __extract_module_parts(verilog_code, module_name):
-    """
-    A function to extract the header, definition and body of the module from the Verilog code.
-    """
+def extract_module_parts(verilog_code, module_name):
+    # A function to extract the header, definition and body of the module from the Verilog code.
     module_pattern = f"module\\s+{module_name}\\s*"
     module_match = re.search(module_pattern, verilog_code)
     if not module_match:
@@ -114,7 +111,7 @@ def __extract_module_parts(verilog_code, module_name):
     if port_start is None or port_end is None:
         return None, None, None
 
-    # Find the semicolon after port list
+    # Find the semicolon after port list.
     pos = port_end
     while pos < len(verilog_code) and verilog_code[pos] != ";":
         pos += 1
@@ -123,14 +120,14 @@ def __extract_module_parts(verilog_code, module_name):
 
     module_definition = verilog_code[start_pos : pos + 1]
 
-    # Find module body (everything between module definition and matching endmodule)
+    # Find module body (everything between module definition and matching endmodule).
     body_start = pos + 1
     pos = body_start
 
     while pos < len(verilog_code):
-        # Look for "endmodule" keyword
+        # Look for "endmodule" keyword.
         if verilog_code[pos:].lstrip().startswith("endmodule"):
-            # Extract body excluding the endmodule keyword
+            # Extract body excluding the endmodule keyword.
             module_body = verilog_code[body_start:pos].strip()
             return header_content, module_definition, module_body
         pos += 1
@@ -138,10 +135,8 @@ def __extract_module_parts(verilog_code, module_name):
     return None, None, None
 
 
-def __replace_internal_signal(signal_name, module_body):
-    """
-    A function to replace the internal signal with the modified signal.
-    """
+def replace_internal_signal(signal, module_body):
+    # A function to replace the internal signal with the modified signal.
     lines = module_body.split("\n")
 
     for i, line in enumerate(lines):
@@ -167,98 +162,33 @@ def __replace_internal_signal(signal_name, module_body):
     return "\n".join(lines)
 
 
-def insert_gate(design_file_path, module_name, signal_name, internal_signal_name):
-    """
-    A function to insert a AND gate logic for particular signal into the Verilog code.
-    """
-    verilog_code = ""
+def generate_dpi_always_block(control_signals, import_function):
+    match = re.search(REGEX_STRING_MATCH_IMPORT_FUNCTION, import_function)
+    func_name = match.group(1)
+    params = match.group(2)
 
     param_list = [param.strip() for param in params.split(",")]
     cleaned_params = [param.replace("output ", "", 1).strip() for param in param_list]
     new_params = ", ".join(cleaned_params)
 
-    # Check if the signal is a output or input port of the module.
-    is_output_port = __is_signal_port(verilog_code, signal_name, "output")
-    is_input_port = __is_signal_port(verilog_code, signal_name, "input")
+    clock = control_signals["clock"]
+    edge = control_signals["edge"]
 
-    header_content, module_definition, module_body = __extract_module_parts(verilog_code, module_name)
+    dpi_always_block = f"""
+    always_ff @({edge} {clock}) begin
+        {func_name}({new_params});
+    end"""
 
-    if module_definition is None:
-        err_message = f"Error: Module '{module_name}' not found in the Verilog code."
-        return False, err_message
+    return dpi_always_block
 
-    # Check if the signal is used in the module.
-    if not re.search(REGEX_STRING_MATCH_SIGNAL.format(signal_name), module_body):
-        err_message = f"Warning: Signal '{signal_name}' not found in module '{module_name}'."
-        return False, err_message
 
-    modified_signal_name = f"modified_{signal_name}"
-
-    # Insert the gate logic into the Verilog code.
-    if is_output_port:
-        gate_logic = f"    assign {signal_name} = {modified_signal_name} & {internal_signal_name};\n"
-        modified_body = re.sub(rf"(?<!\w){signal_name}(?!\w)", modified_signal_name, module_body)
+def add_dpi_calls(verilog_code, initial_block, always_block):
+    parts = verilog_code.rsplit("endmodule", 1)
+    if len(parts) == 2:
+        modified_code = parts[0] + "\n" + initial_block + always_block + "\nendmodule" + parts[1]
+        return modified_code
     else:
-        gate_logic = f"    wire {modified_signal_name};\n"
-        gate_logic += f"    assign {modified_signal_name} = {signal_name} & {internal_signal_name};\n"
-
-        if is_input_port:
-            modified_body = re.sub(rf"(?<!\w){signal_name}(?!\w)", modified_signal_name, module_body)
-        else:
-            modified_body = __replace_internal_signal(signal_name, module_body)
-
-    modified_body = gate_logic + modified_body
-    modified_code = f"{header_content}\n\n{module_definition}\n{modified_body}\nendmodule"
-
-    with open(design_file_path, "w") as out_file:
-        out_file.write(modified_code)
-
-    return True, ""
-
-
-def add_port_to_instance(file_path, module_name, instance_name, new_port):
-    with open(file_path, "r") as file:
-        verilog_code = "".join(file.readlines())
-
-    m = re.search(REGEX_STRING_MATCH_INSTANCE_BEGIN.format(module_name, instance_name), verilog_code)
-    if m:
-        before = verilog_code[: m.start()]
-        found_pattern = m.group(0)
-        after = verilog_code[m.end() :]
-    else:
-        err_message = f"Error: Module '{module_name}' with instance name {instance_name} not found in the Verilog code."
-        return False, err_message
-
-    modified_code = before + found_pattern
-    modified_code += f"\n.{new_port}({new_port}),"
-    modified_code += after
-
-    with open(file_path, "w") as out_file:
-        out_file.write(modified_code)
-
-    return True, ""
-
-
-def add_port_to_module(file_path, module_name, new_port):
-    with open(file_path, "r") as file:
-        verilog_code = "".join(file.readlines())
-
-    m = re.search(REGEX_STRING_MATCH_SPEC_MODULE_BEGIN.format(module_name), verilog_code)
-    if m:
-        before = verilog_code[: m.start()]
-        found_pattern = m.group(0)
-        after = verilog_code[m.end() :]
-    else:
-        err_message = f"Module '{module_name}' not found in the Verilog code."
-        return False, err_message
-    modified_code = before + found_pattern
-    modified_code += f"\ninput {new_port},"
-    modified_code += after
-
-    with open(file_path, "w") as out_file:
-        out_file.write(modified_code)
-
-    return True, ""
+        return verilog_code
 
 
 class RtlPatcher:
@@ -323,18 +253,14 @@ class RtlPatcher:
             f.write(cpp_content)
 
     def __insert_gate(self, module_name, verilog_code, signal, punch_signal):
-        is_input_port = is_signal_input(verilog_code, signal)
-        is_output_port = is_signal_output(verilog_code, signal)
+        is_input_port = is_signal_port(verilog_code, signal, "input")
+        is_output_port = is_signal_port(verilog_code, signal, "output")
 
-        match = re.search(REGEX_STRING_MATCH_FULL_MODULE.format(module_name), verilog_code, re.DOTALL)
-        if not match:
+        header_content, module_definition, module_body = extract_module_parts(verilog_code, module_name)
+
+        if module_definition is None:
             err_message = f"Module '{module_name}' not found in the Verilog code."
             raise ValueError(err_message)
-
-        module_body = match.group(1)
-
-        match = re.search(REGEX_STRING_MATCH_MODULE_PORTS.format(module_name), verilog_code, re.DOTALL)
-        module_definition = match.group(0)
 
         # Check if the signal exists in the module. It is quite possible that the signal in the port
         # is never used in the implementation. Thus, output the warning.
@@ -358,7 +284,7 @@ class RtlPatcher:
                 modified_body = replace_internal_signal(signal, module_body)
 
         modified_body = gate_logic + modified_body
-        modified_code = f"{module_definition}\n{modified_body}\nendmodule"
+        modified_code = f"{header_content}\n\n{module_definition}\n{modified_body}\nendmodule"
 
         return modified_code
 
