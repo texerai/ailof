@@ -11,41 +11,30 @@ namespace lf
 
     struct LogicFuzzer::LogicFuzzerImpl
     {
-        uint32_t count = 0;
+        uint32_t count;
         bool value = false;
     };
 
     LogicFuzzer::LogicFuzzer(uint32_t seed)
     {
         std::srand(seed);
-        if (pimpl_ == nullptr)
-        {
-            pimpl_ = new LogicFuzzerImpl();
-        }
+        pimpl_ = new LogicFuzzerImpl();
+        pimpl_->count = (std::rand() % (kMaxCount - 1)) + 1;
     }
 
-    LogicFuzzer::LogicFuzzer()
-    {
-        LogicFuzzer(0);
-    }
+    LogicFuzzer::LogicFuzzer() : LogicFuzzer(0) { }
 
-    LogicFuzzer::~LogicFuzzer()
-    {
-        if (pimpl_ != nullptr)
-        {
-            delete pimpl_;
-        }
-    }
+    LogicFuzzer::~LogicFuzzer() { delete pimpl_; }
 
-    int LogicFuzzer::Congest()
+    uint8_t LogicFuzzer::Congest() const
     {
-        if (pimpl_->count == 0)
-        {
-            pimpl_->count = std::rand() % kMaxCount;
-            pimpl_->value = !pimpl_->value;
-        }
         pimpl_->count--;
 
-        return static_cast<int>(pimpl_->value);
+        if (pimpl_->count == 0)
+        {
+            pimpl_->value = !pimpl_->value;
+            pimpl_->count = (std::rand() % (kMaxCount - 1)) + 1;
+        }
+        return static_cast<uint8_t>(pimpl_->value);
     }
 }

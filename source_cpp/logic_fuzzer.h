@@ -9,7 +9,7 @@ namespace lf
     class LogicFuzzer
     {
     public:
-        int Congest();
+        uint8_t Congest() const;
 
         // Constructor control.
         LogicFuzzer();
