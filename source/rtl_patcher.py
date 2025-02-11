@@ -271,11 +271,13 @@ class RtlPatcher:
         # Modify the signal to include the gate.
         modified_signal = f"modified_{signal}"
 
+        gate_logic = f"    wire {punch_signal};\n"
+
         if is_output_port:
-            gate_logic = f"    assign {signal} = {modified_signal} & {punch_signal};\n"
+            gate_logic += f"    assign {signal} = {modified_signal} & {punch_signal};\n"
             modified_body = re.sub(rf"(?<!\w){signal}(?!\w)", modified_signal, module_body)
         else:
-            gate_logic = f"    wire {modified_signal};\n"
+            gate_logic += f"    wire {modified_signal};\n"
             gate_logic += f"    assign {modified_signal} = {signal} & {punch_signal};\n"
 
             if is_input_port:
