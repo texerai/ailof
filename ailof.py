@@ -65,6 +65,7 @@ def main():
                     with open(file, "w") as outfile:
                         outfile.write(code)
             os.remove(RtlPatcher.BACKUP_FILE)
+
     # Parse VCD.
     elif is_parsed:
         formatter = FlistFormatter.FlistFormatter()
@@ -84,10 +85,13 @@ def main():
             selected_signals, return_code = signal_explorer.run()
 
             if return_code == ReturnCode.SUCCESS:
-                rtl_patcher = RtlPatcher.RtlPatcher(json_design_hierarchy, selected_modules, selected_signals)
-                is_patched, err_message = rtl_patcher.patch()
-                if not is_patched:
-                    print(err_message)
+                rtl_patcher = RtlPatcher.RtlPatcher(selected_modules, selected_signals)
+                return_code = rtl_patcher.patch()
+
+                if return_code == ReturnCode.SUCCESS:
+                    print("Patching completed successfully.")
+                else:
+                    print("Patching failed.")
 
 
 main()
