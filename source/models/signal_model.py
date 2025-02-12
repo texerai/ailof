@@ -8,13 +8,14 @@ class SignalExplorerModel:
         flattened = {}
         for module, module_info in modules_with_signals.items():
             try:
-                for signal in module_info["signals"]:
+                for signal in module_info["fuzz_candidates"]:
                     signal_name = signal["name"]
                     full_signal_name = f"{module}.{signal_name}"
                     signal_info = signal.copy()
                     signal_info["width"] = module_info["signal_width_data"][signal_name]
                     signal_info["module_name"] = module_info["module_name"]
                     signal_info["declaration_path"] = module_info["declaration_path"]
+                    signal_info["parent_module_control_signals"] = module_info["control_signals"]
                     flattened[full_signal_name] = signal_info
             except Exception as e:
                 print(f"Warning: {e}")

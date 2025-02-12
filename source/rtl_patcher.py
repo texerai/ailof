@@ -4,20 +4,21 @@ import random
 import re
 import sys
 
+from source.enums import ReturnCode
+
 REGEX_STRING_MATCH_SPEC_MODULE_BEGIN = r"module\s+{}(?:\s+import\s+[\w:.*]+;)?(?:\s*#\(\s*([\s\S]*?)\s*\))?\s*\("
-REGEX_STRING_MATCH_OUTPUT_SIGNAL = r"\boutput\s+(?:wire|logic|reg)?\s*(?:\[.*?\]\s*)?(?:.*,\s*)*{}\s*(?=[,;])"
-REGEX_STRING_MATCH_INPUT_SIGNAL = r"\binput\s+(?:wire|logic|reg)?\s*(?:\[.*?\]\s*)?(?:.*,\s*)*{}\s*(?=[,;])"
 REGEX_STRING_MATCH_MODULE_PORTS = r"module\s+{}\s*(?:\s+import\s+[\w:]+(?:\*|[\w,]*)\s*;\s*)?\#?\s*\([^;]*?\);"
+REGEX_STRING_MATCH_INPUT_SIGNAL = r"\binput\s+(?:wire|logic|reg)?\s*(?:\[.*?\]\s*)?(?:.*,\s*)*{}\s*(?=[,;])"
+REGEX_STRING_MATCH_OUTPUT_SIGNAL = r"\boutput\s+(?:wire|logic|reg)?\s*(?:\[.*?\]\s*)?(?:.*,\s*)*{}\s*(?=[,;])"
 REGEX_STRING_MATCH_SIGNAL = r"(?<![\w.]){}\b(?![\w.])"
 REGEX_STRING_MATCH_INSTANCE_BEGIN = r"{}\ +(#\([^;]*?\))?\s+\)\ {}\ +\("
+REGEX_STRING_MATCH_IMPORT_FUNCTION = r'import "DPI-C" function void (\w+)\s*\(([^)]*)\);'
 
 BACKUP_FILE = "./backup.json"
 
 
-def __find_module_declaration(verilog_code):
-    """
-    A function to find the module declaration in the Verilog code.
-    """
+def find_module_declaration(verilog_code):
+    # A function to find the module declaration in the Verilog code.
     lines = verilog_code.split("\n")
     declaration = []
     in_module = False
@@ -41,12 +42,10 @@ def __find_module_declaration(verilog_code):
                 return "\n".join(declaration)
 
 
-def __is_signal_port(verilog_code, signal_name, port_type):
-    """
-    A function to check if the signal is a input or output port of the module.
-    """
-    module_decl = __find_module_declaration(verilog_code)
-    
+def is_signal_port(verilog_code, signal, port_type):
+    # A function to check if the signal is a input or output port of the module.
+    module_decl = find_module_declaration(verilog_code)
+
     if not module_decl:
         return False
 
@@ -74,16 +73,14 @@ def __is_signal_port(verilog_code, signal_name, port_type):
 
         ports = [p.strip() for p in port_list.split(",")]
 
-        if signal_name in ports:
+        if signal in ports:
             return True
 
     return False
 
 
-def __extract_module_parts(verilog_code, module_name):
-    """
-    A function to extract the header, definition and body of the module from the Verilog code.
-    """
+def extract_module_parts(verilog_code, module_name):
+    # A function to extract the header, definition and body of the module from the Verilog code.
     module_pattern = f"module\\s+{module_name}\\s*"
     module_match = re.search(module_pattern, verilog_code)
     if not module_match:
@@ -114,7 +111,7 @@ def __extract_module_parts(verilog_code, module_name):
     if port_start is None or port_end is None:
         return None, None, None
 
-    # Find the semicolon after port list
+    # Find the semicolon after port list.
     pos = port_end
     while pos < len(verilog_code) and verilog_code[pos] != ";":
         pos += 1
@@ -123,14 +120,14 @@ def __extract_module_parts(verilog_code, module_name):
 
     module_definition = verilog_code[start_pos : pos + 1]
 
-    # Find module body (everything between module definition and matching endmodule)
+    # Find module body (everything between module definition and matching endmodule).
     body_start = pos + 1
     pos = body_start
 
     while pos < len(verilog_code):
-        # Look for "endmodule" keyword
+        # Look for "endmodule" keyword.
         if verilog_code[pos:].lstrip().startswith("endmodule"):
-            # Extract body excluding the endmodule keyword
+            # Extract body excluding the endmodule keyword.
             module_body = verilog_code[body_start:pos].strip()
             return header_content, module_definition, module_body
         pos += 1
@@ -138,10 +135,8 @@ def __extract_module_parts(verilog_code, module_name):
     return None, None, None
 
 
-def __replace_internal_signal(signal_name, module_body):
-    """
-    A function to replace the internal signal with the modified signal.
-    """
+def replace_internal_signal(signal, module_body):
+    # A function to replace the internal signal with the modified signal.
     lines = module_body.split("\n")
 
     for i, line in enumerate(lines):
@@ -159,7 +154,7 @@ def __replace_internal_signal(signal_name, module_body):
         left_part = line[:op_pos].strip()
         right_part = line[op_pos:].strip()
 
-        modified_right_part = re.sub(rf"\b{signal_name}\b", f"modified_{signal_name}", right_part)
+        modified_right_part = re.sub(rf"\b{signal}\b", f"modified_{signal}", right_part)
 
         if right_part != modified_right_part:
             lines[i] = f"{left_part} {modified_right_part}"
@@ -167,273 +162,185 @@ def __replace_internal_signal(signal_name, module_body):
     return "\n".join(lines)
 
 
-def insert_gate(design_file_path, module_name, signal_name, internal_signal_name):
-    """
-    A function to insert a AND gate logic for particular signal into the Verilog code.
-    """
-    verilog_code = ""
+def generate_dpi_always_block(control_signals, import_function):
+    match = re.search(REGEX_STRING_MATCH_IMPORT_FUNCTION, import_function)
+    func_name = match.group(1)
+    params = match.group(2)
 
-    with open(design_file_path, "r") as infile:
-        verilog_code = "".join(infile.readlines())
+    param_list = [param.strip() for param in params.split(",")]
+    cleaned_params = [param.replace("output ", "", 1).strip() for param in param_list]
+    new_params = ", ".join(cleaned_params)
 
-    # Check if the signal is a output or input port of the module.
-    is_output_port = __is_signal_port(verilog_code, signal_name, "output")
-    is_input_port = __is_signal_port(verilog_code, signal_name, "input")
+    clock = control_signals["clock"]
+    edge = control_signals["edge"]
 
-    header_content, module_definition, module_body = __extract_module_parts(verilog_code, module_name)
+    dpi_always_block = f"""
+    always_ff @({edge} {clock}) begin
+        {func_name}({new_params});
+    end"""
 
-    if module_definition is None:
-        err_message = f"Error: Module '{module_name}' not found in the Verilog code."
-        return False, err_message
+    return dpi_always_block
 
-    # Check if the signal is used in the module.
-    if not re.search(REGEX_STRING_MATCH_SIGNAL.format(signal_name), module_body):
-        err_message = f"Warning: Signal '{signal_name}' not found in module '{module_name}'."
-        return False, err_message
 
-    modified_signal_name = f"modified_{signal_name}"
-
-    # Insert the gate logic into the Verilog code.
-    if is_output_port:
-        gate_logic = f"    assign {signal_name} = {modified_signal_name} & {internal_signal_name};\n"
-        modified_body = re.sub(rf"(?<!\w){signal_name}(?!\w)", modified_signal_name, module_body)
+def add_dpi_calls(verilog_code, initial_block, always_block):
+    parts = verilog_code.rsplit("endmodule", 1)
+    if len(parts) == 2:
+        modified_code = parts[0] + "\n" + initial_block + always_block + "\nendmodule" + parts[1]
+        return modified_code
     else:
-        gate_logic = f"    wire {modified_signal_name};\n"
-        gate_logic += f"    assign {modified_signal_name} = {signal_name} & {internal_signal_name};\n"
-
-        if is_input_port:
-            modified_body = re.sub(rf"(?<!\w){signal_name}(?!\w)", modified_signal_name, module_body)
-        else:
-            modified_body = __replace_internal_signal(signal_name, module_body)
-
-    modified_body = gate_logic + modified_body
-    modified_code = f"{header_content}\n\n{module_definition}\n{modified_body}\nendmodule"
-
-    with open(design_file_path, "w") as out_file:
-        out_file.write(modified_code)
-
-    return True, ""
-
-
-def add_port_to_instance(file_path, module_name, instance_name, new_port):
-    with open(file_path, "r") as file:
-        verilog_code = "".join(file.readlines())
-
-    m = re.search(REGEX_STRING_MATCH_INSTANCE_BEGIN.format(module_name, instance_name), verilog_code)
-    if m:
-        before = verilog_code[: m.start()]
-        found_pattern = m.group(0)
-        after = verilog_code[m.end() :]
-    else:
-        err_message = f"Error: Module '{module_name}' with instance name {instance_name} not found in the Verilog code."
-        return False, err_message
-
-    modified_code = before + found_pattern
-    modified_code += f"\n.{new_port}({new_port}),"
-    modified_code += after
-
-    with open(file_path, "w") as out_file:
-        out_file.write(modified_code)
-
-    return True, ""
-
-
-def add_port_to_module(file_path, module_name, new_port):
-    with open(file_path, "r") as file:
-        verilog_code = "".join(file.readlines())
-
-    m = re.search(REGEX_STRING_MATCH_SPEC_MODULE_BEGIN.format(module_name), verilog_code)
-    if m:
-        before = verilog_code[: m.start()]
-        found_pattern = m.group(0)
-        after = verilog_code[m.end() :]
-    else:
-        err_message = f"Module '{module_name}' not found in the Verilog code."
-        return False, err_message
-    modified_code = before + found_pattern
-    modified_code += f"\ninput {new_port},"
-    modified_code += after
-
-    with open(file_path, "w") as out_file:
-        out_file.write(modified_code)
-
-    return True, ""
+        return verilog_code
 
 
 class RtlPatcher:
-    def __init__(self, json_design_hierarchy, selected_modules, signals_to_punch):
-        sys.stdout.write("\x1b[2J\x1b[H")
-        print(f"RTL patcher is initialized with {len(signals_to_punch)} signals to process.\n")
-        self.json_design_hierarchy = json_design_hierarchy
+    def __init__(self, selected_modules, selected_signals):
         self.selected_modules = selected_modules
-        self.signals_to_punch = signals_to_punch
+        self.selected_signals = selected_signals
+        self.grouped_signals = {}
+        # Clear the screen and print the header.
+        sys.stdout.write("\x1b[2J\x1b[H")
+        print(f"RTL patcher is initialized with {len(self.selected_signals)} signal(s) to process.\n")
+        # Create unique modification names for each signal.
         id = 0
-        for signal_hierarchy, signal in self.signals_to_punch.items():
-            signal["punch_name"] = f"punch_out_{signal['name']}_{id}"
+        for _, signal_data in self.selected_signals.items():
+            signal_name = signal_data["name"]
+            signal_data["punch_name"] = f"punch_out_{signal_name}_{id}"
             id += 1
 
-    def insert_gates(self, design_file_path, hierarchy, module_name):
-        for signal_hierarchy, signal in self.signals_to_punch.items():
-            signal_name = signal["name"]
-            gate_input_signal = signal["punch_name"]
+    def __preprocess(self):
+        # Group signals by parent module.
+        for _, signal_data in self.selected_signals.items():
+            parent_module_path = signal_data["declaration_path"]
+            if parent_module_path not in self.grouped_signals:
+                self.grouped_signals[parent_module_path] = []
+            self.grouped_signals[parent_module_path].append(signal_data)
 
-            is_inserted, err_message = insert_gate(design_file_path, module_name, signal_name, gate_input_signal)
+    def __backup(self):
+        # Create backups of all files that will be modified.
+        backed_up_files = {}
 
-            if len(err_message) > 0:
-                print(err_message)
+        for parent_module_path, _ in self.grouped_signals.items():
+            with open(parent_module_path, "r") as f:
+                verilog_code = f.read()
+            backed_up_files[parent_module_path] = verilog_code
 
-        return True, ""
+        with open(BACKUP_FILE, "w") as json_file:
+            json.dump(backed_up_files, json_file, indent=4)
 
-    def punch_through_instances(self, hierarchy):
-        for signal_hierarchy, signal in self.signals_to_punch.items():
-            gate_input_name = signal["punch_name"]
-            curr_hierarchy = ""
-            instances = hierarchy.split(".")
-            first_instance = instances[0]
-            seperator = f"{first_instance}."
-            previous_file_path = self.json_design_hierarchy[first_instance]["declaration_path"]
-            for instance in instances[1:]:
-                curr_hierarchy += seperator + instance
-                curr_module_name = self.json_design_hierarchy[curr_hierarchy]["module_name"]
-                is_added, err_message = add_port_to_instance(previous_file_path, curr_module_name, instance, gate_input_name)
-                if not is_added:
-                    return False, err_message
-                previous_file_path = self.json_design_hierarchy[curr_hierarchy]["declaration_path"]
-                seperator = "."
+    def __create_dpi(self, module_name, punch_signals):
+        cpp_content = '#include "logic_fuzzer.h"\n\n'
+        cpp_content += "#include <memory>\n"
+        cpp_content += "#include <vector>\n"
+        cpp_content += "#include <cstdint>\n\n"
+        cpp_content += "static std::vector<std::shared_ptr<lf::LogicFuzzer>> fuzzers;\n\n"
+        cpp_content += f'extern "C" void init_{module_name}()\n{{\n'
+        cpp_content += f"    const int kSeed = {random.randint(0, 1000)};\n"
+        cpp_content += f"    for (size_t i = 0; i < {1}; ++i)\n"  # TODO: Change this to the number of fuzzers.
+        cpp_content += "    {\n"
+        cpp_content += "        fuzzers.push_back(std::make_shared<lf::LogicFuzzer>(i + kSeed));\n"
+        cpp_content += "    }\n"
+        cpp_content += "}\n\n"
 
-        return True, ""
+        cpp_content += f'extern "C" void fuzz_{module_name}('
+        for signal in punch_signals:
+            cpp_content += f"uint8_t* {signal}, "
+        cpp_content = cpp_content[:-2] + ")\n{\n"
+        i = 0
+        for signal in punch_signals:
+            cpp_content += f"    *{signal} = fuzzers[{i}]->Congest() & 0x1;\n"
+        cpp_content += "}"
 
-    def punch_through_modules(self, hierarchy):
-        for signal_hierarchy, signal in self.signals_to_punch.items():
-            gate_input_name = signal["punch_name"]
-            instances = hierarchy.split(".")
-            first_instance = instances[0]
-            seperator = f"{first_instance}."
-            curr_hierarchy = ""
-            for instance in instances[1:]:
-                curr_hierarchy += seperator + instance
-                file_path = self.json_design_hierarchy[curr_hierarchy]["declaration_path"]
-                module_name = self.json_design_hierarchy[curr_hierarchy]["module_name"]
-                is_added, err_message = add_port_to_module(file_path, module_name, gate_input_name)
-                if not is_added:
-                    return False, err_message
-                seperator = "."
+        with open(f"{module_name}_dpi.cpp", "w") as f:
+            f.write(cpp_content)
 
-        return True, ""
+    def __insert_gate(self, module_name, verilog_code, signal, punch_signal):
+        is_input_port = is_signal_port(verilog_code, signal, "input")
+        is_output_port = is_signal_port(verilog_code, signal, "output")
 
-    def create_dpi(self):
-        top_instances = {}
-        for signal_hierarchy, signal in self.signals_to_punch.items():
-            gate_input_name = signal["punch_name"]
-            instances = signal_hierarchy.split(".")
-            top_instance = instances[0]
-            if top_instance not in top_instances:
-                top_instances[top_instance] = {}
-                top_instances[top_instance]["declaration_path"] = self.json_design_hierarchy[top_instance]["declaration_path"]
-                top_instances[top_instance]["signals"] = [gate_input_name]
+        header_content, module_definition, module_body = extract_module_parts(verilog_code, module_name)
+
+        if module_definition is None:
+            err_message = f"Module '{module_name}' not found in the Verilog code."
+            raise ValueError(err_message)
+
+        # Check if the signal exists in the module. It is quite possible that the signal in the port
+        # is never used in the implementation. Thus, output the warning.
+        if not re.search(REGEX_STRING_MATCH_SIGNAL.format(signal), module_body):
+            err_message = f"Warning: Signal '{signal}' not found in module '{module_name}'."
+            raise ValueError(err_message)
+
+        # Modify the signal to include the gate.
+        modified_signal = f"modified_{signal}"
+
+        gate_logic = f"    wire {punch_signal};\n"
+
+        if is_output_port:
+            gate_logic += f"    assign {signal} = {modified_signal} & {punch_signal};\n"
+            modified_body = re.sub(rf"(?<!\w){signal}(?!\w)", modified_signal, module_body)
+        else:
+            gate_logic += f"    wire {modified_signal};\n"
+            gate_logic += f"    assign {modified_signal} = {signal} & {punch_signal};\n"
+
+            if is_input_port:
+                modified_body = re.sub(rf"(?<!\w){signal}(?!\w)", modified_signal, module_body)
             else:
-                top_instances[top_instance]["signals"].append(gate_input_name)
+                modified_body = replace_internal_signal(signal, module_body)
 
-        for top_instance, data in top_instances.items():
-            import_function = f'import "DPI-C" function void fuzz_{top_instance}('
-            for signal in data["signals"]:
-                import_function += f"output {signal}, "
-            import_function = import_function[:-2] + ");"
+        modified_body = gate_logic + modified_body
+        modified_code = f"{header_content}\n\n{module_definition}\n{modified_body}\nendmodule"
 
-            cpp_function = '#include "logic_fuzzer.h"\n\n'
-            cpp_function += "#include <memory>\n"
-            cpp_function += "#include <vector>\n"
-            cpp_function += "#include <cstdint>\n\n"
-            cpp_function += "static std::vector<std::shared_ptr<lf::LogicFuzzer>> fuzzers;\n\n"
-            cpp_function += 'extern "C" void init()\n{\n'
-            cpp_function += f"    const int kSeed = {random.randint(0, 1000)};\n"
-            cpp_function += f"    for (size_t i = 0; i < {len(top_instances)}; ++i)\n"
-            cpp_function += "    {\n"
-            cpp_function += "        fuzzers.push_back(std::make_shared<lf::LogicFuzzer>(i + kSeed));\n"
-            cpp_function += "    }\n"
-            cpp_function += "}\n\n"
+        return modified_code
 
-            cpp_function += f'extern "C" void fuzz_{top_instance}('
-            for signal in data["signals"]:
-                cpp_function += f"int* {signal}, "
-            cpp_function = cpp_function[:-2] + ")\n{\n"
-            i = 0
-            for signal in data["signals"]:
-                cpp_function += f"    *{signal} = fuzzers[{i}]->Congest();\n"
-            cpp_function += "}"
+    def __insert_gates(self, module_name, module_path, signals):
+        with open(module_path, "r") as f:
+            verilog_code = f.read()
 
-            verilog_code = ""
-            try:
-                with open(data["declaration_path"], "r") as infile:
-                    verilog_code = "".join(infile.readlines())
-                with open(data["declaration_path"], "w") as outfile:
-                    outfile.write(f"{import_function}\n\n{verilog_code}")
-                with open(f"{top_instance}_dpi.cpp", "w") as outfile:
-                    outfile.write(cpp_function)
-            except Exception as e:
-                err_message = f"Error: {e}"
-                return False, err_message
+        modified_code = verilog_code
+        for s in signals:
+            signal = s["name"]
+            punch_signal = s["punch_name"]
+            modified_code = self.__insert_gate(module_name, modified_code, signal, punch_signal)
 
-        return True, ""
+        with open(module_path, "w") as f:
+            f.write(modified_code)
+
+    def __insert_dpi_calls(self, module_name, module_path, punch_signals, control_signals):
+        import_init = f'import "DPI-C" function void init_{module_name}();'
+        import_fuzz = f'import "DPI-C" function void fuzz_{module_name}('
+        for signal in punch_signals:
+            import_fuzz += f"output {signal}, "
+        import_fuzz = import_fuzz[:-2] + ");"
+
+        initial_block = "    initial begin\n"
+        initial_block += f"        init_{module_name}();\n"
+        initial_block += "    end\n"
+        always_block = generate_dpi_always_block(control_signals, import_fuzz)
+
+        with open(module_path, "r") as f:
+            verilog_code = f.read()
+
+        modified_code = add_dpi_calls(verilog_code, initial_block, always_block)
+        modified_code = import_init + "\n" + import_fuzz + "\n\n" + modified_code
+
+        with open(module_path, "w") as f:
+            f.write(modified_code)
+
+    def __patch_module(self, module_path, signals):
+        module_name = signals[0]["module_name"]
+        punch_signals = [signal["punch_name"] for signal in signals]
+        control_signals = signals[0]["parent_module_control_signals"]
+        self.__create_dpi(module_name, punch_signals)
+        self.__insert_gates(module_name, module_path, signals)
+        self.__insert_dpi_calls(module_name, module_path, punch_signals, control_signals)
 
     def patch(self):
-        # Backup files.
         try:
-            backed_up_files = {}
-            for hierarchy, data in self.selected_modules.items():
-                instances = hierarchy.split(".")
-                curr_hierarchy = ""
-                seperator = ""
-                for instance in instances:
-                    curr_hierarchy += seperator + instance
-                    file_path = self.json_design_hierarchy[curr_hierarchy]["declaration_path"]
-                    verilog_code = ""
-                    with open(file_path, "r") as infile:
-                        verilog_code = "".join(infile.readlines())
-                    backed_up_files[file_path] = verilog_code
-                    seperator = "."
-            with open(BACKUP_FILE, "w") as json_file:
-                json.dump(backed_up_files, json_file, indent=4)
+            self.__preprocess()
+            self.__backup()
+            for module_path, signals in self.grouped_signals.items():
+                self.__patch_module(module_path, signals)
+
+            return ReturnCode.SUCCESS
+
         except Exception as e:
-            err_message = f"Error: {e}"
-            return False, err_message
-
-        # Filter only modules that were selected.
-        # FIXME: Should be refactored. Traverse only signals.
-        selected_signal_modules = {}
-        for signal_hierarchy, signal_data in self.signals_to_punch.items():
-            module_hierarchy = ".".join(signal_hierarchy.split(".")[:-1])
-            if module_hierarchy not in selected_signal_modules:
-                if module_hierarchy in self.selected_modules:
-                    selected_signal_modules[module_hierarchy] = self.selected_modules[module_hierarchy]
-                else:
-                    print(f"Warning: {module_hierarchy} in not in selected modules.")
-
-        # Patch.
-        for hierarchy, data in selected_signal_modules.items():
-            module_name = self.json_design_hierarchy[hierarchy]["module_name"]
-
-            # Insert gates.
-            is_inserted, err_message = self.insert_gates(data["declaration_path"], hierarchy, module_name)
-
-            if is_inserted:
-                # Punch through instances.
-                is_punched, err_message = self.punch_through_instances(hierarchy)
-
-                if is_punched:
-                    # Punch through modules.
-                    is_punched, err_message = self.punch_through_modules(hierarchy)
-
-                    if is_punched:
-                        # Create DPI.
-                        is_created, err_message = self.create_dpi()
-                        if not is_created:
-                            return False, err_message
-                    else:
-                        return False, err_message
-                else:
-                    return False, err_message
-            else:
-                return False, err_message
-
-        return True, ""
+            print(f"Error patching module: {str(e)}")
+            return ReturnCode.FAILURE
