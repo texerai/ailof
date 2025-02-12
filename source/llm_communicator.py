@@ -43,11 +43,6 @@ Respond with ONLY valid JSON in the following format, without any additional tex
                     // or potential edge cases. Keep to one sentence.
 }}
 
-Exclude:
-- Module ports (input, output, inout)
-- Instance ports (connections to submodule instances)
-- Any signals that might affect functionality under specific conditions
-
 Do not include any explanatory text before or after the JSON output.
 """
 TOKEN_LIMIT = 80000

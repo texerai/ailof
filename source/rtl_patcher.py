@@ -5,8 +5,6 @@ import re
 import sys
 
 REGEX_STRING_MATCH_SPEC_MODULE_BEGIN = r"module\s+{}(?:\s+import\s+[\w:.*]+;)?(?:\s*#\(\s*([\s\S]*?)\s*\))?\s*\("
-REGEX_STRING_MATCH_OUTPUT_SIGNAL = r"\boutput\s+(?:wire|logic|reg)?\s*(?:\[.*?\]\s*)?(?:.*,\s*)*{}\s*(?=[,;])"
-REGEX_STRING_MATCH_INPUT_SIGNAL = r"\binput\s+(?:wire|logic|reg)?\s*(?:\[.*?\]\s*)?(?:.*,\s*)*{}\s*(?=[,;])"
 REGEX_STRING_MATCH_MODULE_PORTS = r"module\s+{}\s*(?:\s+import\s+[\w:]+(?:\*|[\w,]*)\s*;\s*)?\#?\s*\([^;]*?\);"
 REGEX_STRING_MATCH_SIGNAL = r"(?<![\w.]){}\b(?![\w.])"
 REGEX_STRING_MATCH_INSTANCE_BEGIN = r"{}\ +(#\([^;]*?\))?\s+\)\ {}\ +\("
@@ -14,70 +12,27 @@ REGEX_STRING_MATCH_INSTANCE_BEGIN = r"{}\ +(#\([^;]*?\))?\s+\)\ {}\ +\("
 BACKUP_FILE = "./backup.json"
 
 
-def __find_module_declaration(verilog_code):
+def __is_signal(verilog_code, signal_name, port_type):
     """
-    A function to find the module declaration in the Verilog code.
-    """
-    lines = verilog_code.split("\n")
-    declaration = []
-    in_module = False
-    paren_count = 0
-
-    for line in lines:
-        line = re.sub(r"//.*$", "", line)
-
-        if not in_module:
-            if re.match(r"\s*module\s+\w+", line):
-                in_module = True
-                declaration.append(line)
-                paren_count = line.count("(") - line.count(")")
-                if paren_count == 0 and ";" in line:
-                    return "\n".join(declaration)
-                continue
-        else:
-            declaration.append(line)
-            paren_count += line.count("(") - line.count(")")
-            if paren_count == 0 and ";" in line:
-                return "\n".join(declaration)
-
-
-def __is_signal_port(verilog_code, signal_name, port_type):
-    """
-    A function to check if the signal is a input or output port of the module.
-    """
-    module_decl = __find_module_declaration(verilog_code)
+    Check if a signal with the given name and port type exists in the Verilog code.
     
-    if not module_decl:
-        return False
-
-    lines = [line.strip() for line in module_decl.split("\n")]
-
-    merged_lines = []
-    current_line = ""
-    for line in lines:
-        if not line or line.isspace():
-            continue
-
-        line = re.sub(r"//.*$", "", line)
-        current_line += " " + line
-        if not line.rstrip().endswith(","):
-            merged_lines.append(current_line.strip())
-            current_line = ""
-
-    for line in merged_lines:
-        if not line.startswith(port_type):
-            continue
-
-        port_list = re.sub(r"^" + port_type + r"\s+(wire|reg|logic)?\s*", "", line)
-
-        port_list = re.sub(r"\[.*?\]", "", port_list)
-
-        ports = [p.strip() for p in port_list.split(",")]
-
-        if signal_name in ports:
-            return True
-
-    return False
+    Args:
+        verilog_code (str): The Verilog code to search in
+        signal_name (str): Name of the signal to find
+        port_type (str): Type of port (input, output, inout)
+    
+    Returns:
+        bool: True if signal declaration is found, False otherwise
+    """
+    # Pattern explanation:
+    # - Start with port_type
+    # - Followed by optional whitespace
+    # - Optional type (wire/reg/logic/custom_type) with whitespace
+    # - Optional array/struct dimensions with whitespace
+    # - Signal name with word boundaries
+    pattern = rf'{port_type}\s+(?:[\w:]+\s+)*(?:\[[^\]]+\]\s+)*{re.escape(signal_name)}\b'
+    
+    return bool(re.search(pattern, verilog_code, re.MULTILINE))
 
 
 def __extract_module_parts(verilog_code, module_name):
@@ -167,7 +122,76 @@ def __replace_internal_signal(signal_name, module_body):
     return "\n".join(lines)
 
 
-def insert_gate(design_file_path, module_name, signal_name, internal_signal_name):
+def __find_modules_using_signal(verilog_code, signal_name):
+    """
+    Find module instantiations that use the given signal name as a parameter.
+    
+    Args:
+        verilog_code (str): The Verilog code to search
+        signal_name (str): The signal name to look for
+        
+    Returns:
+        list[tuple]: List of (instance_name, port_name, line_content) tuples where the signal is used
+    """
+    # Remove comments to avoid false matches
+    lines = verilog_code.split('\n')
+    code_without_comments = []
+    original_lines = {}  # Store original lines with their cleaned versions
+    
+    for i, line in enumerate(lines):
+        # Remove single-line comments but keep the original
+        cleaned_line = re.sub(r"//.*$", "", line)
+        code_without_comments.append(cleaned_line)
+        original_lines[i] = line
+    
+    # Rejoin the code
+    code_without_comments = '\n'.join(code_without_comments)
+    
+    results = []
+    
+    # Find all module instantiations with their port connections
+    module_pattern = r"(\w+)\s*#?\s*\([^;]*?\)\s*(\w+)\s*\(\s*(?:[^;]*?)\s*\)\s*;"
+    
+    for match in re.finditer(module_pattern, code_without_comments, re.DOTALL | re.MULTILINE):
+        module_type = match.group(1)
+        instance_name = match.group(2)
+        instance_text = match.group(0)
+        instance_start = match.start()
+        
+        # Find the specific port connection line - handle both input and output ports
+        port_pattern = r"\.(\w+)(?:_[io])?(?:\s*\(\s*" + re.escape(signal_name) + r"\s*\)|\s*\(\s*" + re.escape(signal_name) + r"\s*\))"
+        
+        # Get all lines of this instance
+        instance_lines = instance_text.split('\n')
+        base_line_num = code_without_comments[:instance_start].count('\n')
+        
+        # Search each line for the port connection
+        for i, line in enumerate(instance_lines):
+            port_match = re.search(port_pattern, line)
+            if port_match:
+                port_name = port_match.group(1)
+                line_number = base_line_num + i
+                results.append((instance_name, port_name, original_lines[line_number]))
+    
+    return results
+
+
+def __identify_port_type(path, json_design_hierarchy, port_name):
+    print(f"Identifying port type for {port_name} in {path}")
+    module_path = json_design_hierarchy[path]["declaration_path"]
+
+    with open(module_path, "r") as infile:
+        verilog_code = "".join(infile.readlines())
+    
+    if __is_signal(verilog_code, port_name, "input"):
+        return "input"
+    elif __is_signal(verilog_code, port_name, "output"):
+        return "output"
+    else:
+        return None
+
+
+def insert_gate(design_file_path, module_name, signal_name, internal_signal_name, json_design_hierarchy, hierarchy):
     """
     A function to insert a AND gate logic for particular signal into the Verilog code.
     """
@@ -177,8 +201,8 @@ def insert_gate(design_file_path, module_name, signal_name, internal_signal_name
         verilog_code = "".join(infile.readlines())
 
     # Check if the signal is a output or input port of the module.
-    is_output_port = __is_signal_port(verilog_code, signal_name, "output")
-    is_input_port = __is_signal_port(verilog_code, signal_name, "input")
+    is_output_port = __is_signal(verilog_code, signal_name, "output")
+    is_input_port = __is_signal(verilog_code, signal_name, "input")
 
     header_content, module_definition, module_body = __extract_module_parts(verilog_code, module_name)
 
@@ -192,7 +216,7 @@ def insert_gate(design_file_path, module_name, signal_name, internal_signal_name
         return False, err_message
 
     modified_signal_name = f"modified_{signal_name}"
-
+    
     # Insert the gate logic into the Verilog code.
     if is_output_port:
         gate_logic = f"    assign {signal_name} = {modified_signal_name} & {internal_signal_name};\n"
@@ -205,6 +229,16 @@ def insert_gate(design_file_path, module_name, signal_name, internal_signal_name
             modified_body = re.sub(rf"(?<!\w){signal_name}(?!\w)", modified_signal_name, module_body)
         else:
             modified_body = __replace_internal_signal(signal_name, module_body)
+            signal_usage = __find_modules_using_signal(modified_body, signal_name)
+            
+            for instance_name, port_name, line_content in signal_usage:
+                print(f"Instance name: {instance_name}, Port name: {port_name}, Line content: {line_content}")
+                instance_hierarchy = f"{hierarchy}.{instance_name}"
+                port_type = __identify_port_type(instance_hierarchy, json_design_hierarchy, port_name)
+                
+                if port_type == "input":
+                    modified_line = re.sub(rf'\({signal_name}\)', f'(modified_{signal_name})', line_content)
+                    modified_body = modified_body.replace(line_content, modified_line)
 
     modified_body = gate_logic + modified_body
     modified_code = f"{header_content}\n\n{module_definition}\n{modified_body}\nendmodule"
@@ -259,7 +293,6 @@ def add_port_to_module(file_path, module_name, new_port):
 
     return True, ""
 
-
 class RtlPatcher:
     def __init__(self, json_design_hierarchy, selected_modules, signals_to_punch):
         sys.stdout.write("\x1b[2J\x1b[H")
@@ -277,7 +310,7 @@ class RtlPatcher:
             signal_name = signal["name"]
             gate_input_signal = signal["punch_name"]
 
-            is_inserted, err_message = insert_gate(design_file_path, module_name, signal_name, gate_input_signal)
+            is_inserted, err_message = insert_gate(design_file_path, module_name, signal_name, gate_input_signal, self.json_design_hierarchy, hierarchy)
 
             if len(err_message) > 0:
                 print(err_message)
