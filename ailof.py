@@ -85,7 +85,7 @@ def main():
             selected_signals, return_code = signal_explorer.run()
 
             if return_code == ReturnCode.SUCCESS:
-                rtl_patcher = RtlPatcher.RtlPatcher(selected_modules, selected_signals)
+                rtl_patcher = RtlPatcher.RtlPatcher(json_design_hierarchy, selected_modules, selected_signals)
                 return_code = rtl_patcher.patch()
 
                 if return_code == ReturnCode.SUCCESS:

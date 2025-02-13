@@ -7,76 +7,18 @@ import sys
 from source.enums import ReturnCode
 
 REGEX_STRING_MATCH_SPEC_MODULE_BEGIN = r"module\s+{}(?:\s+import\s+[\w:.*]+;)?(?:\s*#\(\s*([\s\S]*?)\s*\))?\s*\("
-REGEX_STRING_MATCH_MODULE_PORTS = r"module\s+{}\s*(?:\s+import\s+[\w:]+(?:\*|[\w,]*)\s*;\s*)?\#?\s*\([^;]*?\);"
-REGEX_STRING_MATCH_INPUT_SIGNAL = r"\binput\s+(?:wire|logic|reg)?\s*(?:\[.*?\]\s*)?(?:.*,\s*)*{}\s*(?=[,;])"
-REGEX_STRING_MATCH_OUTPUT_SIGNAL = r"\boutput\s+(?:wire|logic|reg)?\s*(?:\[.*?\]\s*)?(?:.*,\s*)*{}\s*(?=[,;])"
 REGEX_STRING_MATCH_SIGNAL = r"(?<![\w.]){}\b(?![\w.])"
 REGEX_STRING_MATCH_INSTANCE_BEGIN = r"{}\ +(#\([^;]*?\))?\s+\)\ {}\ +\("
+REGEX_STRING_MATCH_ALL_MODULES = r"(\w+)\s*#?\s*\([^;]*?\)\s*(\w+)\s*\(\s*(?:[^;]*?)\s*\)\s*;"
 REGEX_STRING_MATCH_IMPORT_FUNCTION = r'import "DPI-C" function void (\w+)\s*\(([^)]*)\);'
 
 BACKUP_FILE = "./backup.json"
 
 
-def find_module_declaration(verilog_code):
-    # A function to find the module declaration in the Verilog code.
-    lines = verilog_code.split("\n")
-    declaration = []
-    in_module = False
-    paren_count = 0
+def is_signal(verilog_code, signal, port_type):
+    pattern = rf"{port_type}\s+(?:[\w:]+\s+)*(?:\[[^\]]+\]\s+)*{re.escape(signal)}\b"
 
-    for line in lines:
-        line = re.sub(r"//.*$", "", line)
-
-        if not in_module:
-            if re.match(r"\s*module\s+\w+", line):
-                in_module = True
-                declaration.append(line)
-                paren_count = line.count("(") - line.count(")")
-                if paren_count == 0 and ";" in line:
-                    return "\n".join(declaration)
-                continue
-        else:
-            declaration.append(line)
-            paren_count += line.count("(") - line.count(")")
-            if paren_count == 0 and ";" in line:
-                return "\n".join(declaration)
-
-
-def is_signal_port(verilog_code, signal, port_type):
-    # A function to check if the signal is a input or output port of the module.
-    module_decl = find_module_declaration(verilog_code)
-
-    if not module_decl:
-        return False
-
-    lines = [line.strip() for line in module_decl.split("\n")]
-
-    merged_lines = []
-    current_line = ""
-    for line in lines:
-        if not line or line.isspace():
-            continue
-
-        line = re.sub(r"//.*$", "", line)
-        current_line += " " + line
-        if not line.rstrip().endswith(","):
-            merged_lines.append(current_line.strip())
-            current_line = ""
-
-    for line in merged_lines:
-        if not line.startswith(port_type):
-            continue
-
-        port_list = re.sub(r"^" + port_type + r"\s+(wire|reg|logic)?\s*", "", line)
-
-        port_list = re.sub(r"\[.*?\]", "", port_list)
-
-        ports = [p.strip() for p in port_list.split(",")]
-
-        if signal in ports:
-            return True
-
-    return False
+    return bool(re.search(pattern, verilog_code, re.MULTILINE))
 
 
 def extract_module_parts(verilog_code, module_name):
@@ -135,8 +77,8 @@ def extract_module_parts(verilog_code, module_name):
     return None, None, None
 
 
-def replace_internal_signal(signal, module_body):
-    # A function to replace the internal signal with the modified signal.
+def replace_internal_signal_based_on_assignment(signal, module_body):
+    # A function to replace the internal signal based on the assignment.
     lines = module_body.split("\n")
 
     for i, line in enumerate(lines):
@@ -191,11 +133,64 @@ def add_dpi_calls(verilog_code, initial_block, always_block):
         return verilog_code
 
 
+def find_submodules_using_internal_signal(verilog_code, signal):
+    # Finds all submodules that use the given signal as a parameter.
+
+    lines = verilog_code.split("\n")
+    code_without_comments = []
+    original_lines = {}
+
+    for i, line in enumerate(lines):
+        # Remove single-line comments but keep the original
+        cleaned_line = re.sub(r"//.*$", "", line)
+        code_without_comments.append(cleaned_line)
+        original_lines[i] = line
+
+    # Rejoin the code
+    code_without_comments = "\n".join(code_without_comments)
+
+    results = []
+
+    # Find all module instantiations with their port connections
+
+    for match in re.finditer(REGEX_STRING_MATCH_ALL_MODULES, code_without_comments, re.DOTALL | re.MULTILINE):
+        instance_name = match.group(2)
+        instance_text = match.group(0)
+        instance_start = match.start()
+
+        # Find the specific port connection line - handle both input and output ports
+        port_pattern = r"\.(\w+)(?:_[io])?(?:\s*\(\s*" + re.escape(signal) + r"\s*\)|\s*\(\s*" + re.escape(signal) + r"\s*\))"
+
+        # Get all lines of this instance
+        instance_lines = instance_text.split("\n")
+        base_line_num = code_without_comments[:instance_start].count("\n")
+
+        # Search each line for the port connection
+        for i, line in enumerate(instance_lines):
+            port_match = re.search(port_pattern, line)
+            if port_match:
+                port_name = port_match.group(1)
+                line_number = base_line_num + i
+                results.append((instance_name, port_name, original_lines[line_number]))
+
+    return results
+
+
+def identify_internal_port_type(verilog_code, signal):
+    # A function to identify the type of the given signal.
+    if is_signal(verilog_code, signal, "input"):
+        return "input"
+    elif is_signal(verilog_code, signal, "output"):
+        return "output"
+    else:
+        return None
+
 class RtlPatcher:
-    def __init__(self, selected_modules, selected_signals):
+    def __init__(self, json_design_hierarchy, selected_modules, selected_signals):
+        self.json_design_hierarchy = json_design_hierarchy
         self.selected_modules = selected_modules
         self.selected_signals = selected_signals
-        self.grouped_signals = {}
+        self.grouped_signals = []
         # Clear the screen and print the header.
         sys.stdout.write("\x1b[2J\x1b[H")
         print(f"RTL patcher is initialized with {len(self.selected_signals)} signal(s) to process.\n")
@@ -208,17 +203,25 @@ class RtlPatcher:
 
     def __preprocess(self):
         # Group signals by parent module.
-        for _, signal_data in self.selected_signals.items():
+
+        temp_grouped_signals = {}
+
+        for signal_path, signal_data in self.selected_signals.items():
             parent_module_path = signal_data["declaration_path"]
-            if parent_module_path not in self.grouped_signals:
-                self.grouped_signals[parent_module_path] = []
-            self.grouped_signals[parent_module_path].append(signal_data)
+            module_hierarchy = ".".join(signal_path.split(".")[:-1])
+
+            if parent_module_path not in temp_grouped_signals:
+                temp_grouped_signals[parent_module_path] = {"module_hierarchy": module_hierarchy, "signals": []}
+            temp_grouped_signals[parent_module_path]["signals"].append(signal_data)
+
+        for module_path, data in temp_grouped_signals.items():
+            self.grouped_signals.append((data["module_hierarchy"], module_path, data["signals"]))
 
     def __backup(self):
         # Create backups of all files that will be modified.
         backed_up_files = {}
 
-        for parent_module_path, _ in self.grouped_signals.items():
+        for _, parent_module_path, _ in self.grouped_signals:
             with open(parent_module_path, "r") as f:
                 verilog_code = f.read()
             backed_up_files[parent_module_path] = verilog_code
@@ -252,9 +255,9 @@ class RtlPatcher:
         with open(f"{module_name}_dpi.cpp", "w") as f:
             f.write(cpp_content)
 
-    def __insert_gate(self, module_name, verilog_code, signal, punch_signal):
-        is_input_port = is_signal_port(verilog_code, signal, "input")
-        is_output_port = is_signal_port(verilog_code, signal, "output")
+    def __insert_gate(self, module_hierarchy, module_name, verilog_code, signal, punch_signal):
+        is_input_port = is_signal(verilog_code, signal, "input")
+        is_output_port = is_signal(verilog_code, signal, "output")
 
         header_content, module_definition, module_body = extract_module_parts(verilog_code, module_name)
 
@@ -262,17 +265,15 @@ class RtlPatcher:
             err_message = f"Module '{module_name}' not found in the Verilog code."
             raise ValueError(err_message)
 
-        # Check if the signal exists in the module. It is quite possible that the signal in the port
-        # is never used in the implementation. Thus, output the warning.
+        # Check if the signal is used in the module.
         if not re.search(REGEX_STRING_MATCH_SIGNAL.format(signal), module_body):
             err_message = f"Warning: Signal '{signal}' not found in module '{module_name}'."
             raise ValueError(err_message)
 
-        # Modify the signal to include the gate.
         modified_signal = f"modified_{signal}"
+        gate_logic = f" wire {punch_signal};\n"
 
-        gate_logic = f"    wire {punch_signal};\n"
-
+        # Insert the gate logic into the Verilog code.        
         if is_output_port:
             gate_logic += f"    assign {signal} = {modified_signal} & {punch_signal};\n"
             modified_body = re.sub(rf"(?<!\w){signal}(?!\w)", modified_signal, module_body)
@@ -283,14 +284,29 @@ class RtlPatcher:
             if is_input_port:
                 modified_body = re.sub(rf"(?<!\w){signal}(?!\w)", modified_signal, module_body)
             else:
-                modified_body = replace_internal_signal(signal, module_body)
+                modified_body = replace_internal_signal_based_on_assignment(signal, module_body)
+                signal_usage = find_submodules_using_internal_signal(modified_body, signal)
+
+                for submodule_name, submodule_port_name, line_content in signal_usage:
+                    submodule_hierarchy = f"{module_hierarchy}.{submodule_name}"
+                    
+                    submodule_path = self.json_design_hierarchy[submodule_hierarchy]["declaration_path"]
+
+                    with open(submodule_path, "r") as infile:
+                        submodule_verilog_code = "".join(infile.readlines())
+                    
+                    port_type = identify_internal_port_type(submodule_verilog_code, submodule_port_name)
+
+                    if port_type == "input":
+                        modified_line = re.sub(rf"\({signal}\)", f"(modified_{signal})", line_content)
+                        modified_body = modified_body.replace(line_content, modified_line)
 
         modified_body = gate_logic + modified_body
         modified_code = f"{header_content}\n\n{module_definition}\n{modified_body}\nendmodule"
 
         return modified_code
 
-    def __insert_gates(self, module_name, module_path, signals):
+    def __insert_gates(self, module_hierarchy, module_path, module_name, signals):
         with open(module_path, "r") as f:
             verilog_code = f.read()
 
@@ -298,7 +314,7 @@ class RtlPatcher:
         for s in signals:
             signal = s["name"]
             punch_signal = s["punch_name"]
-            modified_code = self.__insert_gate(module_name, modified_code, signal, punch_signal)
+            modified_code = self.__insert_gate(module_hierarchy, module_name, modified_code, signal, punch_signal)
 
         with open(module_path, "w") as f:
             f.write(modified_code)
@@ -324,20 +340,20 @@ class RtlPatcher:
         with open(module_path, "w") as f:
             f.write(modified_code)
 
-    def __patch_module(self, module_path, signals):
+    def __patch_module(self, module_hierarchy, module_path, signals):
         module_name = signals[0]["module_name"]
         punch_signals = [signal["punch_name"] for signal in signals]
         control_signals = signals[0]["parent_module_control_signals"]
         self.__create_dpi(module_name, punch_signals)
-        self.__insert_gates(module_name, module_path, signals)
+        self.__insert_gates(module_hierarchy, module_path, module_name, signals)
         self.__insert_dpi_calls(module_name, module_path, punch_signals, control_signals)
 
     def patch(self):
         try:
             self.__preprocess()
             self.__backup()
-            for module_path, signals in self.grouped_signals.items():
-                self.__patch_module(module_path, signals)
+            for module_hierarchy, module_path, signals in self.grouped_signals:
+                self.__patch_module(module_hierarchy,module_path, signals)
 
             return ReturnCode.SUCCESS
 
