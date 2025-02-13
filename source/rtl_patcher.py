@@ -53,6 +53,7 @@ def extract_module_parts(verilog_code, module_name):
     if port_start is None or port_end is None:
         return None, None, None
 
+    # Find the semicolon after port list.
     pos = port_end
     while pos < len(verilog_code) and verilog_code[pos] != ";":
         pos += 1
@@ -61,11 +62,14 @@ def extract_module_parts(verilog_code, module_name):
 
     module_definition = verilog_code[start_pos : pos + 1]
 
+    # Find module body (everything between module definition and matching endmodule).
     body_start = pos + 1
     pos = body_start
 
     while pos < len(verilog_code):
+        # Look for "endmodule" keyword.
         if verilog_code[pos:].lstrip().startswith("endmodule"):
+            # Extract body excluding the endmodule keyword.
             module_body = verilog_code[body_start:pos].strip()
             return header_content, module_definition, module_body
         pos += 1
@@ -252,9 +256,8 @@ class RtlPatcher:
             f.write(cpp_content)
 
     def __insert_gate(self, module_hierarchy, module_name, verilog_code, signal, punch_signal):
-        # Check if the signal is a output or input port of the module.
-        is_output_port = is_signal(verilog_code, signal, "output")
         is_input_port = is_signal(verilog_code, signal, "input")
+        is_output_port = is_signal(verilog_code, signal, "output")
 
         header_content, module_definition, module_body = extract_module_parts(verilog_code, module_name)
 
