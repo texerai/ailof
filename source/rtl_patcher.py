@@ -270,19 +270,19 @@ class RtlPatcher:
             err_message = f"Warning: Signal '{signal}' not found in module '{module_name}'."
             raise ValueError(err_message)
 
-        modified_signal_name = f"modified_{signal}"
+        modified_signal = f"modified_{signal}"
         gate_logic = f" wire {punch_signal};\n"
 
         # Insert the gate logic into the Verilog code.        
         if is_output_port:
-            gate_logic += f"    assign {signal} = {modified_signal_name} & {punch_signal};\n"
-            modified_body = re.sub(rf"(?<!\w){signal}(?!\w)", modified_signal_name, module_body)
+            gate_logic += f"    assign {signal} = {modified_signal} & {punch_signal};\n"
+            modified_body = re.sub(rf"(?<!\w){signal}(?!\w)", modified_signal, module_body)
         else:
-            gate_logic += f"    wire {modified_signal_name};\n"
-            gate_logic += f"    assign {modified_signal_name} = {signal} & {punch_signal};\n"
+            gate_logic += f"    wire {modified_signal};\n"
+            gate_logic += f"    assign {modified_signal} = {signal} & {punch_signal};\n"
 
             if is_input_port:
-                modified_body = re.sub(rf"(?<!\w){signal}(?!\w)", modified_signal_name, module_body)
+                modified_body = re.sub(rf"(?<!\w){signal}(?!\w)", modified_signal, module_body)
             else:
                 modified_body = replace_internal_signal_based_on_assignment(signal, module_body)
                 signal_usage = find_submodules_using_internal_signal(modified_body, signal)
