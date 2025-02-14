@@ -185,6 +185,7 @@ def identify_internal_port_type(verilog_code, signal):
     else:
         return None
 
+
 class RtlPatcher:
     def __init__(self, json_design_hierarchy, selected_modules, selected_signals):
         self.json_design_hierarchy = json_design_hierarchy
@@ -237,7 +238,7 @@ class RtlPatcher:
         cpp_content += "static std::vector<std::shared_ptr<lf::LogicFuzzer>> fuzzers;\n\n"
         cpp_content += f'extern "C" void init_{module_name}()\n{{\n'
         cpp_content += f"    const int kSeed = {random.randint(0, 1000)};\n"
-        cpp_content += f"    for (size_t i = 0; i < {1}; ++i)\n"  # TODO: Change this to the number of fuzzers.
+        cpp_content += f"    for (size_t i = 0; i < {len(punch_signals)}; ++i)\n"
         cpp_content += "    {\n"
         cpp_content += "        fuzzers.push_back(std::make_shared<lf::LogicFuzzer>(i + kSeed));\n"
         cpp_content += "    }\n"
@@ -250,6 +251,7 @@ class RtlPatcher:
         i = 0
         for signal in punch_signals:
             cpp_content += f"    *{signal} = fuzzers[{i}]->Congest() & 0x1;\n"
+            i += 1
         cpp_content += "}"
 
         with open(f"{module_name}_dpi.cpp", "w") as f:
@@ -271,9 +273,9 @@ class RtlPatcher:
             raise ValueError(err_message)
 
         modified_signal = f"modified_{signal}"
-        gate_logic = f" wire {punch_signal};\n"
+        gate_logic = f"    wire {punch_signal};\n"
 
-        # Insert the gate logic into the Verilog code.        
+        # Insert the gate logic into the Verilog code.
         if is_output_port:
             gate_logic += f"    assign {signal} = {modified_signal} & {punch_signal};\n"
             modified_body = re.sub(rf"(?<!\w){signal}(?!\w)", modified_signal, module_body)
@@ -289,12 +291,12 @@ class RtlPatcher:
 
                 for submodule_name, submodule_port_name, line_content in signal_usage:
                     submodule_hierarchy = f"{module_hierarchy}.{submodule_name}"
-                    
+
                     submodule_path = self.json_design_hierarchy[submodule_hierarchy]["declaration_path"]
 
                     with open(submodule_path, "r") as infile:
                         submodule_verilog_code = "".join(infile.readlines())
-                    
+
                     port_type = identify_internal_port_type(submodule_verilog_code, submodule_port_name)
 
                     if port_type == "input":
@@ -353,7 +355,7 @@ class RtlPatcher:
             self.__preprocess()
             self.__backup()
             for module_hierarchy, module_path, signals in self.grouped_signals:
-                self.__patch_module(module_hierarchy,module_path, signals)
+                self.__patch_module(module_hierarchy, module_path, signals)
 
             return ReturnCode.SUCCESS
 
