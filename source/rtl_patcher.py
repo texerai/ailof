@@ -77,8 +77,8 @@ def extract_module_parts(verilog_code, module_name):
     return None, None, None
 
 
-def replace_internal_signal_based_on_assignment(signal, module_body):
-    # A function to replace the internal signal based on the assignment.
+def restore_internal_signal_based_on_assignment(signal, module_body):
+    # A function to restore the internal signal based on the assignment.
     lines = module_body.split("\n")
 
     for i, line in enumerate(lines):
@@ -94,12 +94,17 @@ def replace_internal_signal_based_on_assignment(signal, module_body):
         op_pos = le_pos if le_pos != -1 else eq_pos
 
         left_part = line[:op_pos].strip()
+        assignment_target = left_part.split()[-1] if left_part.split() else ""
+
         right_part = line[op_pos:].strip()
 
-        modified_right_part = re.sub(rf"\b{signal}\b", f"modified_{signal}", right_part)
+        modified_left_part = left_part
 
-        if right_part != modified_right_part:
-            lines[i] = f"{left_part} {modified_right_part}"
+        if f"modified_{signal}" == assignment_target:
+            modified_left_part = " ".join(left_part.split()[:-1] + [signal])
+
+        if left_part != modified_left_part:
+            lines[i] = f"{modified_left_part} {right_part}"
 
     return "\n".join(lines)
 
@@ -133,7 +138,7 @@ def add_dpi_calls(verilog_code, initial_block, always_block):
         return verilog_code
 
 
-def find_submodules_using_internal_signal(verilog_code, signal):
+def find_submodules_using_internal_signal(signal, verilog_code):
     # Finds all submodules that use the given signal as a parameter.
 
     lines = verilog_code.split("\n")
@@ -286,11 +291,25 @@ class RtlPatcher:
             if is_input_port:
                 modified_body = re.sub(rf"(?<!\w){signal}(?!\w)", modified_signal, module_body)
             else:
-                modified_body = replace_internal_signal_based_on_assignment(signal, module_body)
-                signal_usage = find_submodules_using_internal_signal(modified_body, signal)
+                modified_body = re.sub(
+                    rf"((wire|reg|logic)\s+[^;]*\b{signal}\b)|(?<!\.|\w)\b{signal}\b(?!\s*;)",
+                    lambda m: m.group(0) if m.group(1) else modified_signal,
+                    module_body,
+                )
+                modified_body = restore_internal_signal_based_on_assignment(signal, modified_body)
+                signal_usage = find_submodules_using_internal_signal(modified_signal, modified_body)
 
                 for submodule_name, submodule_port_name, line_content in signal_usage:
                     submodule_hierarchy = f"{module_hierarchy}.{submodule_name}"
+
+                    if submodule_hierarchy not in self.json_design_hierarchy:
+                        print(
+                            f"Warning: Submodule '{submodule_hierarchy}' in module '{module_name}' not found in design hierarchy. Ensure that:\n"
+                            f"  1. The module declaration is included in the filelist\n"
+                            f"  2. The module instance is present in the VCD dump\n"
+                            f"Skipping submodule processing...\n"
+                        )
+                        continue
 
                     submodule_path = self.json_design_hierarchy[submodule_hierarchy]["declaration_path"]
 
@@ -299,8 +318,8 @@ class RtlPatcher:
 
                     port_type = identify_internal_port_type(submodule_verilog_code, submodule_port_name)
 
-                    if port_type == "input":
-                        modified_line = re.sub(rf"\({signal}\)", f"(modified_{signal})", line_content)
+                    if port_type == "output":
+                        modified_line = re.sub(rf"\(modified_{signal}\)", f"({signal})", line_content)
                         modified_body = modified_body.replace(line_content, modified_line)
 
         modified_body = gate_logic + modified_body
@@ -360,5 +379,9 @@ class RtlPatcher:
             return ReturnCode.SUCCESS
 
         except Exception as e:
-            print(f"Error patching module: {str(e)}")
+            print("Error during RTL patching preparation:")
+            print(f"  - Module: {module_hierarchy}")
+            print(f"  - File: {module_path}")
+            print(f"  - {str(e)}")
+            print(f"  - {type(e).__name__}: {e.__traceback__.tb_lineno}")
             return ReturnCode.FAILURE
