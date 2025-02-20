@@ -278,7 +278,7 @@ class RtlPatcher:
             raise ValueError(err_message)
 
         modified_signal = f"modified_{signal}"
-        gate_logic = f"    wire {punch_signal};\n"
+        gate_logic = f"    logic {punch_signal};\n"
 
         # Insert the gate logic into the Verilog code.
         if is_output_port:
