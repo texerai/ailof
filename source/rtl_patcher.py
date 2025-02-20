@@ -309,6 +309,8 @@ class RtlPatcher:
                             f"  2. The module instance is present in the VCD dump\n"
                             f"Skipping submodule processing...\n"
                         )
+                        modified_line = re.sub(rf"\(modified_{signal}\)", f"({signal})", line_content)
+                        modified_body = modified_body.replace(line_content, modified_line)
                         continue
 
                     submodule_path = self.json_design_hierarchy[submodule_hierarchy]["declaration_path"]
