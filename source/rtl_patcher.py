@@ -283,7 +283,6 @@ class RtlPatcher:
 
         # Insert the gate logic into the Verilog code.
         if is_output_port:
-            
             gate_logic += f"    assign {signal} = {modified_signal} & {punch_signal};\n"
             modified_body = re.sub(rf"(?<!\w){signal}(?!\w)", modified_signal, module_body)
         else:
