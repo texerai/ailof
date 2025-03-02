@@ -181,6 +181,29 @@ def find_submodules_using_internal_signal(signal, verilog_code):
     return results
 
 
+def replace_except_declaration(signal, module_body):
+    lines = module_body.split("\n")
+    modified_lines = []
+
+    for line in lines:
+        if re.search(rf"(wire|reg|logic)\s+[^=;]*\b{signal}\b[^=;]*,", line) or re.search(rf"(wire|reg|logic)\s+[^=;]*,\s*\b{signal}\b[^=;]*", line):
+            modified_lines.append(line)
+        elif re.search(rf"(wire|reg|logic)\s+[^=;]*\b{signal}\b\s*=", line):
+            modified_lines.append(line)
+        elif re.search(rf"(wire|reg|logic)\s+[^=;]*\b{signal}\b\s*;", line):
+            modified_lines.append(line)
+        elif re.search(rf"\.\b{signal}\b\s*\(", line):
+            modified_line = re.sub(rf"(\.\b{signal}\b\s*\()({signal})(\))", r"\1modified_\2\3", line)
+            if modified_line == line:
+                modified_line = re.sub(rf"(?<!\w){signal}(?!\w)", f"modified_{signal}", line)
+            modified_lines.append(modified_line)
+        else:
+            modified_line = re.sub(rf"(?<!\w){signal}(?!\w)", f"modified_{signal}", line)
+            modified_lines.append(modified_line)
+
+    return "\n".join(modified_lines)
+
+
 def identify_internal_port_type(verilog_code, signal):
     # A function to identify the type of the given signal.
     if is_signal(verilog_code, signal, "input"):
@@ -291,11 +314,7 @@ class RtlPatcher:
             if is_input_port:
                 modified_body = re.sub(rf"(?<!\w){signal}(?!\w)", modified_signal, module_body)
             else:
-                modified_body = re.sub(
-                    rf"((wire|reg|logic)\s+[^;]*\b{signal}\b)|(?<!\.|\w)\b{signal}\b(?!\s*;)",
-                    lambda m: m.group(0) if m.group(1) else modified_signal,
-                    module_body,
-                )
+                modified_body = replace_except_declaration(signal, module_body)
                 modified_body = restore_internal_signal_based_on_assignment(signal, modified_body)
                 signal_usage = find_submodules_using_internal_signal(modified_signal, modified_body)
 
