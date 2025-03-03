@@ -7,7 +7,7 @@ import sys
 from source.enums import ReturnCode
 
 REGEX_STRING_MATCH_SPEC_MODULE_BEGIN = r"module\s+{}(?:\s+import\s+[\w:.*]+;)?(?:\s*#\(\s*([\s\S]*?)\s*\))?\s*\("
-REGEX_STRING_MATCH_SIGNAL = r"(?<![\w.]){}\b(?![\w.])"
+REGEX_STRING_MATCH_SIGNAL = r"(?<![\w.]){}\b(?![\w.])|\.{}\s*,"
 REGEX_STRING_MATCH_INSTANCE_BEGIN = r"{}\ +(#\([^;]*?\))?\s+\)\ {}\ +\("
 REGEX_STRING_MATCH_ALL_MODULES = r"(\w+)\s*#?\s*\([^;]*?\)\s*(\w+)\s*\(\s*(?:[^;]*?)\s*\)\s*;"
 REGEX_STRING_MATCH_IMPORT_FUNCTION = r'import "DPI-C" function void (\w+)\s*\(([^)]*)\);'
@@ -186,11 +186,10 @@ def replace_except_declaration(signal, module_body):
     modified_lines = []
 
     for line in lines:
-        if re.search(rf"(wire|reg|logic)\s+[^=;]*\b{signal}\b[^=;]*,", line) or re.search(rf"(wire|reg|logic)\s+[^=;]*,\s*\b{signal}\b[^=;]*", line):
-            modified_lines.append(line)
-        elif re.search(rf"(wire|reg|logic)\s+[^=;]*\b{signal}\b\s*=", line):
-            modified_lines.append(line)
-        elif re.search(rf"(wire|reg|logic)\s+[^=;]*\b{signal}\b\s*;", line):
+        if re.search(rf"(wire|reg|logic)\s+[^=;]*\b{signal}\b[^=;]*,", line) or \
+        re.search(rf"(wire|reg|logic)\s+[^=;]*,\s*\b{signal}\b[^=;]*", line) or \
+        re.search(rf"(wire|reg|logic)\s+[^=;]*\b{signal}\b\s*=", line) or \
+        re.search(rf"(wire|reg|logic)\s+[^=;]*\b{signal}\b\s*;", line):
             modified_lines.append(line)
         elif re.search(rf"\.\b{signal}\b\s*\(", line):
             modified_line = re.sub(rf"(\.\b{signal}\b\s*\()({signal})(\))", r"\1modified_\2\3", line)
@@ -296,8 +295,8 @@ class RtlPatcher:
             raise ValueError(err_message)
 
         # Check if the signal is used in the module.
-        if not re.search(REGEX_STRING_MATCH_SIGNAL.format(signal), module_body):
-            err_message = f"Warning: Signal '{signal}' not found in module '{module_name}'."
+        if not re.search(REGEX_STRING_MATCH_SIGNAL.format(signal, signal), module_body):
+            err_message = f"Warning: Signal '{signal}' not used in module '{module_name}'."
             raise ValueError(err_message)
 
         modified_signal = f"modified_{signal}"
