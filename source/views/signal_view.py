@@ -10,7 +10,8 @@ class SignalExplorerTerminalView:
         self.start_index = 0
         self.end_index = self.display_width
         self.actual_index = 0
-        self.selected_ids = []
+        self.selected_and_ids = []
+        self.selected_or_ids = []
         self.view_data = []
         self.working_list_size = 0
         self.page_number = 0
@@ -36,8 +37,10 @@ class SignalExplorerTerminalView:
         print("\n===================\n")
         i = 0
         for data in self.view_data:
-            if data["id"] in self.selected_ids:
-                line_to_print = "{}. [x] {}".format(data["id"], data["signal"])
+            if data["id"] in self.selected_and_ids:
+                line_to_print = "{}. [A] {}".format(data["id"], data["signal"])
+            elif data["id"] in self.selected_or_ids:
+                line_to_print = "{}. [O] {}".format(data["id"], data["signal"])
             else:
                 line_to_print = "{}. [ ] {}".format(data["id"], data["signal"])
 
@@ -47,7 +50,9 @@ class SignalExplorerTerminalView:
                 print(f"    {line_to_print}")
             i += 1
         print(f"\n=================== Page {self.page_number}/{math.ceil(self.total_pages) - 1}")
-        print("Commands: Enter/space key to select the signal | Ctrl+c to exit | Ctrl+n to pass signal info further")
+        print(
+            "Commands: Enter/space/1 key to select the signal and fuzz via AND gate | 2 to fuzz via OR gate | Ctrl+c to exit | Ctrl+n to pass signal info further"
+        )
 
     def print_message(self):
         print("Now, select the signals you would like to fuzz.\n")

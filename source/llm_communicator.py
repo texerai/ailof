@@ -2,6 +2,8 @@
 
 import json
 import anthropic
+import openai
+import tiktoken
 import sys
 import time
 
@@ -60,9 +62,9 @@ TOKEN_LIMIT = 80000
 
 
 class LLMCommunicator:
-    def __init__(self, modules):
+    def __init__(self, modules, model_type="openai"):
         self.modules = modules
-        self.claude = anthropic.Anthropic()
+        self.model_type = model_type
         sys.stdout.write("\x1b[2J\x1b[H")
         print(f"LLMCommunicator is initialized with {len(self.modules)} module(s) to process.\n")
 
@@ -74,38 +76,56 @@ class LLMCommunicator:
             raise FileNotFoundError(f"Could not read module at {module_path}: {str(e)}")
 
     def count_module_tokens(self, module_content):
-        return self.claude.beta.messages.count_tokens(
-            model="claude-3-5-sonnet-20241022",
-            messages=[
-                {"role": "user", "content": module_content},
-            ],
-        ).input_tokens
+        if self.model_type == "openai":
+            try:
+                encoding = tiktoken.encoding_for_model("gpt-4o-2024-05-13")
+            except KeyError:
+                encoding = tiktoken.get_encoding("cl100k_base")
+            return len(encoding.encode(module_content))
+        else:
+            return self.claude.beta.messages.count_tokens(
+                model="claude-3-5-sonnet-20241022",
+                messages=[
+                    {"role": "user", "content": module_content},
+                ],
+            ).input_tokens
 
     def analyze_module(self, module_path, signals, module_content):
         module_name = module_path.split("/")[-1]
         print(f"\nAnalyzing module: {module_path}")
         try:
-            response = (
-                self.claude.messages.create(
-                    model="claude-3-5-sonnet-20241022",
+            if self.model_type == "openai":
+                response_content = openai.ChatCompletion.create(
+                    model="gpt-4o-2024-05-13",
                     max_tokens=1024,
                     temperature=0,
-                    system=ROLE,
-                    messages=[
-                        {
-                            "role": "user",
-                            "content": [
-                                {
-                                    "type": "text",
-                                    "text": PROMPT.format(module_name, signals, module_content),
-                                }
-                            ],
-                        }
-                    ],
+                    messages=[{"role": "system", "content": ROLE}, {"role": "user", "content": PROMPT.format(module_name, signals, module_content)}],
+                    response_format={"type": "json_object"},
                 )
-                .content[0]
-                .text
-            )
+
+                response = response_content.choices[0].message.content
+            else:
+                response = (
+                    self.claude.messages.create(
+                        model="claude-3-5-sonnet-20241022",
+                        max_tokens=1024,
+                        temperature=0,
+                        system=ROLE,
+                        messages=[
+                            {
+                                "role": "user",
+                                "content": [
+                                    {
+                                        "type": "text",
+                                        "text": PROMPT.format(module_name, signals, module_content),
+                                    }
+                                ],
+                            }
+                        ],
+                    )
+                    .content[0]
+                    .text
+                )
 
             data = json.loads(response)
 
@@ -120,8 +140,10 @@ class LLMCommunicator:
 
         except anthropic.APIError as e:
             raise RuntimeError(f"API error while analyzing {module_path}: {str(e)}")
+        except openai.BadRequestError as e:
+            raise RuntimeError(f"API error while analyzing {module_path}: {str(e)}")
         except json.JSONDecodeError:
-            raise ValueError(f"LLM response is not a valid JSON: {response}")
+            raise ValueError(f"LLM response is not a valid JSON: {response_content}")
 
     def run(self):
         print("Starting module analysis...")
