@@ -7,9 +7,11 @@ class Command(enum.Enum):
     UP = 1
     DOWN = 2
     TERMINATE = 3
-    SELECT = 4
-    SEARCH = 5
-    CONTINUE = 6
+    SELECT_AND_GATE = 4
+    SELECT_OR_GATE = 5
+    SELECT = 6
+    SEARCH = 7
+    CONTINUE = 8
 
 
 class ReturnCode(enum.Enum):

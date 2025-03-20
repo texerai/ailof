@@ -38,6 +38,12 @@ class SignalExplorerController:
         # Ctrl+C.
         elif key == "\x03":
             ret_command = Command.TERMINATE
+        # 1
+        elif key == "1":
+            ret_command = Command.SELECT_AND_GATE
+        # 2
+        elif key == "2":
+            ret_command = Command.SELECT_OR_GATE
         # Enter/Space.
         elif key in ["\n", "\r", " "]:
             ret_command = Command.SELECT
@@ -87,20 +93,35 @@ class SignalExplorerController:
                     self.view.end_index = (self.view.page_number + 1) * self.view.display_width
                     self.view.highlighted_index = 0
                     self.view.update_view_data(self.model.working_list, self.model.working_list_ids)
-        elif command == Command.SELECT:
+        elif (command == Command.SELECT_AND_GATE) or (command == Command.SELECT):
             if not self.view.view_data:
                 return
             current_id = self.view.view_data[self.view.highlighted_index]["id"]
-            if current_id not in self.view.selected_ids:
-                self.view.selected_ids.append(current_id)
+            if current_id not in self.view.selected_and_ids:
+                if current_id in self.view.selected_or_ids:
+                    self.view.selected_or_ids.remove(current_id)
+                self.view.selected_and_ids.append(current_id)
             else:
-                self.view.selected_ids.remove(current_id)
+                self.view.selected_and_ids.remove(current_id)
+        elif command == Command.SELECT_OR_GATE:
+            if not self.view.view_data:
+                return
+            current_id = self.view.view_data[self.view.highlighted_index]["id"]
+            if current_id not in self.view.selected_or_ids:
+                if current_id in self.view.selected_and_ids:
+                    self.view.selected_and_ids.remove(current_id)
+                self.view.selected_or_ids.append(current_id)
+            else:
+                self.view.selected_or_ids.remove(current_id)
         elif command == Command.CONTINUE:
-            if len(self.view.selected_ids) > 0:
+            if len(self.view.selected_and_ids) + len(self.view.selected_or_ids) > 0:
                 self.running = False
-                for id in self.view.selected_ids:
+                for id in self.view.selected_and_ids:
                     signal = self.model.selected_signals[id].split(" | ")[0]
-                    self.selected_signals[signal] = self.model.all_signals[signal]
+                    self.selected_signals[signal] = {"signal_info": self.model.all_signals[signal], "gate_type": "&"}
+                for id in self.view.selected_or_ids:
+                    signal = self.model.selected_signals[id].split(" | ")[0]
+                    self.selected_signals[signal] = {"signal_info": self.model.all_signals[signal], "gate_type": "|"}
         elif command == Command.TERMINATE:
             self.running = False
             return ReturnCode.TERMINATE

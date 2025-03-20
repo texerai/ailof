@@ -203,8 +203,8 @@ class RtlPatcher:
         # Create unique modification names for each signal.
         id = 0
         for _, signal_data in self.selected_signals.items():
-            signal_name = signal_data["name"]
-            signal_data["punch_name"] = f"punch_out_{signal_name}_{id}"
+            signal_name = signal_data["signal_info"]["name"]
+            signal_data["signal_info"]["punch_name"] = f"punch_out_{signal_name}_{id}"
             id += 1
 
     def __preprocess(self):
@@ -213,7 +213,7 @@ class RtlPatcher:
         temp_grouped_signals = {}
 
         for signal_path, signal_data in self.selected_signals.items():
-            parent_module_path = signal_data["declaration_path"]
+            parent_module_path = signal_data["signal_info"]["declaration_path"]
             module_hierarchy = ".".join(signal_path.split(".")[:-1])
 
             if parent_module_path not in temp_grouped_signals:
@@ -262,7 +262,7 @@ class RtlPatcher:
         with open(f"{module_name}_dpi.cpp", "w") as f:
             f.write(cpp_content)
 
-    def __insert_gate(self, module_hierarchy, module_name, verilog_code, signal, punch_signal):
+    def __insert_gate(self, module_hierarchy, module_name, verilog_code, signal, punch_signal, gate_type):
         is_input_port = is_signal(verilog_code, signal, "input")
         is_output_port = is_signal(verilog_code, signal, "output")
 
@@ -283,10 +283,10 @@ class RtlPatcher:
 
         # Insert the gate logic into the Verilog code.
         if is_output_port:
-            gate_logic += f"    assign {signal} = {modified_signal} & {punch_signal};\n"
+            gate_logic += f"    assign {signal} = {modified_signal} {gate_type} {punch_signal};\n"
             modified_body = re.sub(rf"(?<!\w){signal}(?!\w)", modified_signal, module_body)
         else:
-            gate_logic += f"    assign {modified_signal} = {signal} & {punch_signal};\n"
+            gate_logic += f"    assign {modified_signal} = {signal} {gate_type} {punch_signal};\n"
 
             if is_input_port:
                 modified_body = re.sub(rf"(?<!\w){signal}(?!\w)", modified_signal, module_body)
@@ -335,9 +335,9 @@ class RtlPatcher:
 
         modified_code = verilog_code
         for s in signals:
-            signal = s["name"]
-            punch_signal = s["punch_name"]
-            modified_code = self.__insert_gate(module_hierarchy, module_name, modified_code, signal, punch_signal)
+            signal = s["signal_info"]["name"]
+            punch_signal = s["signal_info"]["punch_name"]
+            modified_code = self.__insert_gate(module_hierarchy, module_name, modified_code, signal, punch_signal, s["gate_type"])
 
         with open(module_path, "w") as f:
             f.write(modified_code)
@@ -364,9 +364,9 @@ class RtlPatcher:
             f.write(modified_code)
 
     def __patch_module(self, module_hierarchy, module_path, signals):
-        module_name = signals[0]["module_name"]
-        punch_signals = [signal["punch_name"] for signal in signals]
-        control_signals = signals[0]["parent_module_control_signals"]
+        module_name = signals[0]["signal_info"]["module_name"]
+        punch_signals = [signal["signal_info"]["punch_name"] for signal in signals]
+        control_signals = signals[0]["signal_info"]["parent_module_control_signals"]
         self.__create_dpi(module_name, punch_signals)
         self.__insert_gates(module_hierarchy, module_path, module_name, signals)
         self.__insert_dpi_calls(module_name, module_path, punch_signals, control_signals)
