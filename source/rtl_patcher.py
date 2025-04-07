@@ -285,6 +285,33 @@ class RtlPatcher:
         if is_output_port:
             gate_logic += f"    assign {signal} = {modified_signal} {gate_type} {punch_signal};\n"
             modified_body = re.sub(rf"(?<!\w){signal}(?!\w)", modified_signal, module_body)
+
+            signal_usage = find_submodules_using_internal_signal(modified_signal, modified_body)
+            for submodule_name, submodule_port_name, line_content in signal_usage:
+                submodule_hierarchy = f"{module_hierarchy}.{submodule_name}"
+
+                if submodule_hierarchy not in self.json_design_hierarchy:
+                    print(
+                        f"Warning: Submodule '{submodule_hierarchy}' in module '{module_name}' not found in design hierarchy. Ensure that:\n"
+                        f"  1. The module declaration is included in the filelist\n"
+                        f"  2. The module instance is present in the VCD dump\n"
+                        f"Skipping submodule processing...\n"
+                    )
+                    modified_line = re.sub(rf"\(modified_{signal}\)", f"({signal})", line_content)
+                    modified_body = modified_body.replace(line_content, modified_line)
+                    continue
+
+                submodule_path = self.json_design_hierarchy[submodule_hierarchy]["declaration_path"]
+
+                with open(submodule_path, "r") as infile:
+                    submodule_verilog_code = "".join(infile.readlines())
+
+                port_type = identify_internal_port_type(submodule_verilog_code, submodule_port_name)
+
+                if port_type == "input":
+                    modified_line = re.sub(rf"\(modified_{signal}\)", f"({signal})", line_content)
+                    modified_body = modified_body.replace(line_content, modified_line)
+
         else:
             gate_logic += f"    assign {modified_signal} = {signal} {gate_type} {punch_signal};\n"
 
